@@ -280,6 +280,23 @@ const DataLayer = {
     }
     LocalStore.set('premium', value);
   },
+
+  // STRIPE CHECKOUT
+  async createCheckout(userId, email) {
+    if (!USE_SUPABASE) {
+      // In offline mode, just toggle premium locally
+      LocalStore.set('premium', true);
+      return { offline: true };
+    }
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ user_id: userId, email }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  },
 };
 
 // ============================================================
@@ -365,12 +382,26 @@ function ScienceModal({ habit, onClose }) {
   return <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:1000,padding:20 }}><div onClick={e=>e.stopPropagation()} style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:16,padding:28,maxWidth:440,width:'100%',maxHeight:'75vh',overflowY:'auto' }}><div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}><span style={{ fontSize:28 }}>{habit.icon}</span><button onClick={onClose} style={{ background:'none',border:'none',color:c.textMuted,cursor:'pointer',fontSize:18 }}>✕</button></div><h3 style={{ fontSize:18,fontWeight:700,marginBottom:16,color:c.text,fontFamily:sans }}>{habit.name}</h3><div style={{ fontSize:10,textTransform:'uppercase',letterSpacing:2,color:c.accent,fontWeight:600,marginBottom:10,fontFamily:sans }}>Why This Matters</div><p style={{ fontSize:14,lineHeight:1.75,color:c.textSec,fontFamily:sans }}>{habit.science}</p></div></div>;
 }
 
-function PremiumModal({ onClose, onUpgrade }) {
+function PremiumModal({ onClose, onUpgrade, user }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleUpgrade = async () => {
+    setLoading(true); setError('');
+    try {
+      const result = await DataLayer.createCheckout(user?.id, user?.email);
+      if (result.offline) { onUpgrade(); onClose(); return; }
+      if (result.url) { window.location.href = result.url; }
+    } catch (e) { setError(e.message || 'Something went wrong'); setLoading(false); }
+  };
+
   return <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20 }}><div onClick={e=>e.stopPropagation()} style={{ background:c.bgCard,border:`1px solid ${c.accent}40`,borderRadius:16,padding:28,maxWidth:380,width:'100%',maxHeight:'85vh',overflowY:'auto' }}>
     <div style={{ textAlign:'center',marginBottom:24 }}><div style={{ fontSize:18,color:c.accent,marginBottom:12,fontWeight:300 }}>+</div><h2 style={{ fontSize:22,fontWeight:700,marginBottom:6,color:c.text,fontFamily:serif }}>Andros Premium</h2><p style={{ color:c.textSec,fontSize:14,fontFamily:sans }}>The complete optimization toolkit</p></div>
     {[['📊','Mood Correlation Graphs'],['😴','Sleep Trend Analytics'],['📈','Detailed Breakdowns'],['🎯','Custom Habits'],['📸','Progress Photos'],['📖','Advanced Protocols']].map(([ic,t],i)=><div key={i} style={{ display:'flex',alignItems:'center',gap:12,marginBottom:14 }}><span style={{ fontSize:18 }}>{ic}</span><span style={{ fontWeight:500,fontSize:14,color:c.text,fontFamily:sans }}>{t}</span></div>)}
     <div style={{ background:c.bgElevated,borderRadius:10,padding:18,textAlign:'center',margin:'20px 0' }}><span style={{ fontSize:32,fontWeight:700,fontFamily:serif,color:c.text }}>$8.99</span><span style={{ color:c.textSec,fontSize:14,fontFamily:sans }}> /mo</span><p style={{ color:c.success,fontSize:12,marginTop:4,fontFamily:sans }}>7-day free trial · cancel anytime</p></div>
-    <button onClick={()=>{onUpgrade();onClose();}} style={{ width:'100%',padding:15,borderRadius:10,border:'none',cursor:'pointer',background:c.accent,color:c.bg,fontSize:15,fontWeight:700,fontFamily:sans }}>Start Free Trial</button>
+    {error && <p style={{ color:c.danger,fontSize:13,textAlign:'center',marginBottom:12,fontFamily:sans }}>{error}</p>}
+    <button onClick={handleUpgrade} disabled={loading} style={{ width:'100%',padding:15,borderRadius:10,border:'none',cursor:loading?'wait':'pointer',background:c.accent,color:c.bg,fontSize:15,fontWeight:700,fontFamily:sans,opacity:loading?0.6:1 }}>{loading ? 'Redirecting to checkout...' : 'Start Free Trial'}</button>
+    <p style={{ textAlign:'center',fontSize:11,color:c.textMuted,marginTop:12,fontFamily:sans }}>Secure payment via Stripe</p>
   </div></div>;
 }
 
@@ -498,10 +529,28 @@ export default function App() {
   const [user,setUser]=useState(null);const [isPremium,setIsPremium]=useState(false);const [tab,setTab]=useState('today');
   const [checkins,setCheckins]=useState({});const [moodLog,setMoodLog]=useState({});const [sleepLog,setSleepLog]=useState({});
   const [scienceHabit,setScienceHabit]=useState(null);const [showPremium,setShowPremium]=useState(false);const [selectedProtocol,setSelectedProtocol]=useState(null);
-  const [loading,setLoading]=useState(true);
+  const [loading,setLoading]=useState(true);const [checkoutMessage,setCheckoutMessage]=useState('');
 
   // Restore session on mount
   useEffect(() => { (async()=>{ try { const u = await DataLayer.restoreSession(); if(u) { setUser(u); const [ch,mo,sl,pr] = await Promise.all([DataLayer.getCheckins(u.id),DataLayer.getMoodLogs(u.id),DataLayer.getSleepLogs(u.id),DataLayer.getPremiumStatus(u.id)]); setCheckins(ch);setMoodLog(mo);setSleepLog(sl);setIsPremium(pr); } } catch(e){} setLoading(false); })(); }, []);
+
+  // Handle Stripe checkout return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success') {
+      setCheckoutMessage('Welcome to Premium! Your 7-day free trial has started.');
+      // Refresh premium status after a short delay (webhook may take a moment)
+      setTimeout(async () => {
+        if (user?.id) {
+          const pr = await DataLayer.getPremiumStatus(user.id);
+          setIsPremium(pr);
+        }
+      }, 2000);
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('checkout') === 'cancel') {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [user]);
 
   const handleLogin = async (u) => {
     setUser(u);
@@ -546,6 +595,7 @@ export default function App() {
         <span style={{ fontSize:14 }}>🔥</span><span style={{ fontFamily:'monospace',fontWeight:700,color:streak>0?c.accent:c.textMuted }}>{streak}</span>
       </div>
     </header>
+    {checkoutMessage && <div style={{ background:c.accentGlow,borderBottom:`1px solid ${c.accent}40`,padding:'12px 20px',display:'flex',justifyContent:'space-between',alignItems:'center' }}><span style={{ fontSize:13,color:c.accent,fontWeight:600,fontFamily:sans }}>{checkoutMessage}</span><button onClick={()=>setCheckoutMessage('')} style={{ background:'none',border:'none',color:c.accent,cursor:'pointer',fontSize:16 }}>✕</button></div>}
     <main style={{ maxWidth:480,margin:'0 auto',padding:'18px 20px',paddingBottom:90 }}>
       {tab==='today'&&<div>
         <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:16,marginBottom:16 }}>
@@ -576,6 +626,6 @@ export default function App() {
       {[{id:'today',label:'Today',icon:'+'},{id:'protocols',label:'Learn',icon:'📖'},{id:'stats',label:'Stats',icon:'📊'},{id:'profile',label:'Profile',icon:'👤'}].map(t=><button key={t.id} onClick={()=>{setTab(t.id);if(t.id!=='protocols')setSelectedProtocol(null);}} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'5px 16px',background:'none',border:'none',cursor:'pointer',color:tab===t.id?c.accent:c.textMuted,transition:'color 0.2s' }}><span style={{ fontSize:t.icon==='+'?22:18,fontWeight:t.icon==='+'?300:400 }}>{t.icon}</span><span style={{ fontSize:10,fontWeight:500 }}>{t.label}</span></button>)}
     </nav>
     {scienceHabit&&<ScienceModal habit={scienceHabit} onClose={()=>setScienceHabit(null)} />}
-    {showPremium&&<PremiumModal onClose={()=>setShowPremium(false)} onUpgrade={handleUpgrade} />}
+    {showPremium&&<PremiumModal onClose={()=>setShowPremium(false)} onUpgrade={handleUpgrade} user={user} />}
   </div>;
 }
