@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://andros.bio/sitemap.xml
