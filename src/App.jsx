@@ -736,7 +736,7 @@ function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-portal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ user_id: user.id })
+        body: JSON.stringify({ user_id: user.id, email: user.email })
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
