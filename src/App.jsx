@@ -132,12 +132,19 @@ const DataLayer = {
       const sb = getSupabase();
       const data = await sb.auth_signUp(email, password, name);
       if (data.error) return { error: data.error.message || data.msg || 'Signup failed' };
+      // Supabase returns a user with no access_token and fake/empty identities when email already exists
+      if (!data.access_token && data.user && (!data.user.identities || data.user.identities.length === 0)) {
+        return { error: 'An account with this email already exists. Try logging in instead.' };
+      }
       if (data.access_token) {
         LocalStore.set('sb_token', data.access_token);
         return { user: { id: data.user?.id, email, name } };
       }
       // Email confirmation might be required
-      return { user: { id: data.id || data.user?.id, email, name }, needsConfirmation: true };
+      if (data.user?.id) {
+        return { user: { id: data.user.id, email, name }, needsConfirmation: true };
+      }
+      return { error: 'An account with this email already exists. Try logging in instead.' };
     }
     const user = { email, name, joinedAt: new Date().toISOString() };
     LocalStore.set('user', user);
@@ -733,8 +740,8 @@ function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else alert('Unable to open subscription management. Contact support@andros.bio');
-    } catch(e) { alert('Unable to open subscription management. Contact support@andros.bio'); }
+      else alert('No active subscription found. If you recently subscribed, try logging out and back in. For help, contact support@andros.bio');
+    } catch(e) { alert('Unable to connect to subscription management. Check your internet connection and try again.'); }
   };
 
   const handleNotifToggle = async () => {
