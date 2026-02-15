@@ -648,6 +648,171 @@ function ProtocolsView({ isPremium, onUpgrade, onSelect }) {
   </div>;
 }
 
+function ProfileView({ user, isPremium, onUpgrade, onLogout }) {
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [pwMsg, setPwMsg] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+
+  const handlePasswordChange = async () => {
+    if (!newPw || newPw.length < 6) { setPwMsg('Password must be at least 6 characters'); return; }
+    setPwLoading(true); setPwMsg('');
+    try {
+      if (USE_SUPABASE) {
+        const sb = getSupabase();
+        const res = await fetch(`${sb.url}/auth/v1/user`, {
+          method: 'PUT', headers: { ...sb.headers(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: newPw })
+        });
+        if (!res.ok) { const d = await res.json(); throw new Error(d.msg || 'Failed to update password'); }
+      }
+      setPwMsg('Password updated successfully');
+      setNewPw(''); setCurrentPw('');
+      setTimeout(() => { setShowPasswordChange(false); setPwMsg(''); }, 2000);
+    } catch(e) { setPwMsg(e.message || 'Failed to update password'); }
+    setPwLoading(false);
+  };
+
+  const handleManageSubscription = async () => {
+    if (!USE_SUPABASE) return;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-portal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ user_id: user.id })
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert('Unable to open subscription management. Contact support@andros.bio');
+    } catch(e) { alert('Unable to open subscription management. Contact support@andros.bio'); }
+  };
+
+  const inp = { width:'100%',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:8,padding:'12px 14px',fontSize:14,color:c.text,outline:'none',boxSizing:'border-box',fontFamily:sans };
+  const sectionStyle = { background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,overflow:'hidden',marginBottom:12 };
+  const rowStyle = { display:'flex',justifyContent:'space-between',alignItems:'center',padding:'15px 18px',cursor:'pointer',borderBottom:`1px solid ${c.border}` };
+  const rowLabel = { fontSize:14,color:c.text,fontFamily:sans };
+  const rowValue = { fontSize:13,color:c.textMuted,fontFamily:sans };
+
+  return <div style={{ paddingTop:20 }}>
+    {/* Avatar & Name */}
+    <div style={{ textAlign:'center',marginBottom:24 }}>
+      <div style={{ width:72,height:72,borderRadius:'50%',margin:'0 auto 14px',background:`linear-gradient(135deg,${c.accent},${c.accentDim})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:c.bg,fontFamily:serif }}>{user.name?user.name[0].toUpperCase():'?'}</div>
+      <h2 style={{ fontSize:20,fontWeight:400,marginBottom:4,fontFamily:serif,color:c.text }}>{user.name}</h2>
+      <p style={{ fontSize:13,color:c.textSec }}>{user.email}</p>
+      {isPremium&&<div style={{ display:'inline-flex',alignItems:'center',gap:6,background:c.premiumGlow,border:`1px solid ${c.accent}40`,borderRadius:16,padding:'5px 14px',fontSize:12,fontWeight:600,color:c.accent,marginTop:10 }}>+ Premium</div>}
+    </div>
+
+    {/* Subscription */}
+    <div style={{ fontSize:11,fontWeight:600,color:c.textMuted,textTransform:'uppercase',letterSpacing:1.5,marginBottom:8,paddingLeft:4,fontFamily:sans }}>Subscription</div>
+    <div style={sectionStyle}>
+      {isPremium ? <>
+        <div style={rowStyle}>
+          <span style={rowLabel}>Plan</span>
+          <span style={{ ...rowValue, color:c.accent, fontWeight:600 }}>Premium — $8.99/mo</span>
+        </div>
+        <div style={{...rowStyle, borderBottom:'none'}} onClick={handleManageSubscription}>
+          <span style={rowLabel}>Manage Subscription</span>
+          <span style={{ color:c.textMuted, fontSize:14 }}>›</span>
+        </div>
+      </> : <div style={{...rowStyle, borderBottom:'none'}} onClick={onUpgrade}>
+        <span style={rowLabel}>Upgrade to Premium</span>
+        <span style={{ color:c.accent, fontSize:13, fontWeight:600 }}>$8.99/mo →</span>
+      </div>}
+    </div>
+
+    {/* Account */}
+    <div style={{ fontSize:11,fontWeight:600,color:c.textMuted,textTransform:'uppercase',letterSpacing:1.5,marginBottom:8,paddingLeft:4,fontFamily:sans,marginTop:20 }}>Account</div>
+    <div style={sectionStyle}>
+      <div style={rowStyle}>
+        <span style={rowLabel}>Email</span>
+        <span style={rowValue}>{user.email}</span>
+      </div>
+      <div style={{...rowStyle, borderBottom:'none'}} onClick={()=>setShowPasswordChange(!showPasswordChange)}>
+        <span style={rowLabel}>Change Password</span>
+        <span style={{ color:c.textMuted, fontSize:14, transform:showPasswordChange?'rotate(90deg)':'rotate(0)', transition:'transform 0.2s' }}>›</span>
+      </div>
+      {showPasswordChange&&<div style={{ padding:'0 18px 18px' }}>
+        <div style={{ marginBottom:10 }}>
+          <input type="password" placeholder="New password (min 6 characters)" value={newPw} onChange={e=>setNewPw(e.target.value)} style={inp} />
+        </div>
+        <button onClick={handlePasswordChange} disabled={pwLoading} style={{ width:'100%',padding:12,borderRadius:8,border:'none',background:c.accent,color:c.bg,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:sans,opacity:pwLoading?0.6:1 }}>{pwLoading?'Updating...':'Update Password'}</button>
+        {pwMsg&&<p style={{ fontSize:12,marginTop:8,color:pwMsg.includes('success')?c.success:c.danger,fontFamily:sans,textAlign:'center' }}>{pwMsg}</p>}
+      </div>}
+    </div>
+
+    {/* App Info */}
+    <div style={{ fontSize:11,fontWeight:600,color:c.textMuted,textTransform:'uppercase',letterSpacing:1.5,marginBottom:8,paddingLeft:4,fontFamily:sans,marginTop:20 }}>App</div>
+    <div style={sectionStyle}>
+      <div style={rowStyle}>
+        <span style={rowLabel}>Sync</span>
+        <span style={{ ...rowValue, color:USE_SUPABASE?c.success:c.textMuted }}>{USE_SUPABASE?'☁ Cloud sync active':'Offline mode'}</span>
+      </div>
+      <div style={rowStyle}>
+        <span style={rowLabel}>Version</span>
+        <span style={rowValue}>1.0.0</span>
+      </div>
+      <div style={{...rowStyle}} onClick={()=>setShowPrivacy(!showPrivacy)}>
+        <span style={rowLabel}>Privacy Policy</span>
+        <span style={{ color:c.textMuted, fontSize:14 }}>›</span>
+      </div>
+      <div style={{...rowStyle, borderBottom:'none'}} onClick={()=>setShowTerms(!showTerms)}>
+        <span style={rowLabel}>Terms of Service</span>
+        <span style={{ color:c.textMuted, fontSize:14 }}>›</span>
+      </div>
+    </div>
+
+    {/* Privacy Policy Modal */}
+    {showPrivacy&&<div onClick={()=>setShowPrivacy(false)} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20 }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:16,padding:28,maxWidth:500,width:'100%',maxHeight:'80vh',overflowY:'auto' }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}><h3 style={{ fontSize:18,fontWeight:700,color:c.text,fontFamily:sans }}>Privacy Policy</h3><button onClick={()=>setShowPrivacy(false)} style={{ background:'none',border:'none',color:c.textMuted,cursor:'pointer',fontSize:18 }}>✕</button></div>
+        <div style={{ fontSize:13,lineHeight:1.8,color:c.textSec,fontFamily:sans }}>
+          <p style={{ marginBottom:12 }}><strong style={{ color:c.text }}>Effective Date:</strong> February 2026</p>
+          <p style={{ marginBottom:12 }}>Andros ("we", "our", "us") operates the website andros.bio. This page informs you of our policies regarding the collection, use, and disclosure of personal data.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>Data We Collect</strong></p>
+          <p style={{ marginBottom:12 }}>We collect your email address and name when you create an account. We store your habit check-ins, mood logs, and sleep logs to provide the service. Payment processing is handled by Stripe — we never see or store your credit card information.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>How We Use Your Data</strong></p>
+          <p style={{ marginBottom:12 }}>Your data is used solely to provide and improve the Andros service. We do not sell, trade, or rent your personal information to third parties. We do not serve ads.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>Data Storage & Security</strong></p>
+          <p style={{ marginBottom:12 }}>Your data is stored securely on Supabase (PostgreSQL) with row-level security policies. All data is transmitted over HTTPS. We use industry-standard encryption.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>Your Rights</strong></p>
+          <p style={{ marginBottom:12 }}>You may request deletion of your account and all associated data at any time by contacting support@andros.bio. You may export your data upon request.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>Contact</strong></p>
+          <p>For privacy questions, email support@andros.bio.</p>
+        </div>
+      </div>
+    </div>}
+
+    {/* Terms of Service Modal */}
+    {showTerms&&<div onClick={()=>setShowTerms(false)} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20 }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:16,padding:28,maxWidth:500,width:'100%',maxHeight:'80vh',overflowY:'auto' }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}><h3 style={{ fontSize:18,fontWeight:700,color:c.text,fontFamily:sans }}>Terms of Service</h3><button onClick={()=>setShowTerms(false)} style={{ background:'none',border:'none',color:c.textMuted,cursor:'pointer',fontSize:18 }}>✕</button></div>
+        <div style={{ fontSize:13,lineHeight:1.8,color:c.textSec,fontFamily:sans }}>
+          <p style={{ marginBottom:12 }}><strong style={{ color:c.text }}>Effective Date:</strong> February 2026</p>
+          <p style={{ marginBottom:12 }}>By using Andros, you agree to these terms. Please read them carefully.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>The Service</strong></p>
+          <p style={{ marginBottom:12 }}>Andros is a habit-tracking tool designed to help users build science-backed daily routines. We are not a medical service. Andros does not provide medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider before making changes to your health routine.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>Subscriptions & Billing</strong></p>
+          <p style={{ marginBottom:12 }}>Premium subscriptions are billed monthly at $8.99/month through Stripe. A 7-day free trial is included with new subscriptions. You may cancel at any time through your account settings — cancellation takes effect at the end of your current billing period. No refunds are provided for partial months.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>User Conduct</strong></p>
+          <p style={{ marginBottom:12 }}>You agree not to misuse the service, attempt to gain unauthorized access, or use the service for any unlawful purpose.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>Disclaimer</strong></p>
+          <p style={{ marginBottom:12 }}>The information provided in Andros is for educational and informational purposes only. Results may vary. Testosterone levels are influenced by many factors including genetics, age, medical conditions, and lifestyle. We make no guarantees about specific health outcomes.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>Limitation of Liability</strong></p>
+          <p style={{ marginBottom:12 }}>Andros is provided "as is" without warranties of any kind. We are not liable for any damages arising from your use of the service.</p>
+          <p style={{ marginBottom:8 }}><strong style={{ color:c.text }}>Contact</strong></p>
+          <p>For questions about these terms, email support@andros.bio.</p>
+        </div>
+      </div>
+    </div>}
+
+    {/* Logout */}
+    <button onClick={onLogout} style={{ width:'100%',padding:14,borderRadius:10,cursor:'pointer',border:`1px solid ${c.border}`,background:'none',color:c.danger,fontSize:14,fontWeight:500,fontFamily:sans,marginTop:20,marginBottom:40 }}>Log Out</button>
+  </div>;
+}
+
 function AuthScreen({ onLogin }) {
   const [mode,setMode]=useState('welcome');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [name,setName]=useState('');const [error,setError]=useState('');const [loading,setLoading]=useState(false);
   const inp = { width:'100%',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:8,padding:'14px 16px',fontSize:15,color:c.text,outline:'none',boxSizing:'border-box',fontFamily:sans };
@@ -783,15 +948,7 @@ export default function App() {
       </div>}
       {tab==='protocols'&&(selectedProtocol?<ProtocolDetail protocol={selectedProtocol} onBack={()=>setSelectedProtocol(null)} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />:<ProtocolsView isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onSelect={setSelectedProtocol} />)}
       {tab==='stats'&&<StatsView checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />}
-      {tab==='profile'&&<div style={{ paddingTop:20,textAlign:'center' }}>
-        <div style={{ width:68,height:68,borderRadius:'50%',margin:'0 auto 14px',background:`linear-gradient(135deg,${c.accent},${c.accentDim})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,fontWeight:700,color:c.bg,fontFamily:serif }}>{user.name?user.name[0].toUpperCase():'?'}</div>
-        <h2 style={{ fontSize:20,fontWeight:400,marginBottom:4,fontFamily:serif }}>{user.name}</h2>
-        <p style={{ fontSize:13,color:c.textSec,marginBottom:14 }}>{user.email}</p>
-        {isPremium&&<div style={{ display:'inline-flex',alignItems:'center',gap:6,background:c.premiumGlow,border:`1px solid ${c.accent}40`,borderRadius:16,padding:'5px 14px',fontSize:12,fontWeight:600,color:c.accent,marginBottom:20 }}>+ Premium</div>}
-        {!isPremium&&<button onClick={()=>setShowPremium(true)} style={{ display:'block',width:'100%',padding:13,borderRadius:10,cursor:'pointer',border:`1px solid ${c.accent}40`,background:c.accentGlow,color:c.accent,fontSize:14,fontWeight:600,marginBottom:12,fontFamily:sans }}>Upgrade to Premium</button>}
-        <div style={{ fontSize:11,color:c.textMuted,marginTop:8,marginBottom:16 }}>{USE_SUPABASE?'☁ Cloud sync active':'📱 Offline mode'}</div>
-        <button onClick={handleLogout} style={{ width:'100%',padding:13,borderRadius:10,cursor:'pointer',border:`1px solid ${c.border}`,background:'none',color:c.danger,fontSize:14,fontWeight:500,fontFamily:sans }}>Log Out</button>
-      </div>}
+      {tab==='profile'&&<ProfileView user={user} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onLogout={handleLogout} />}
     </main>
     <nav style={{ position:'fixed',bottom:0,left:0,right:0,display:'flex',justifyContent:'space-around',background:'rgba(15,13,10,0.97)',borderTop:`1px solid ${c.border}`,padding:'14px 0 18px',zIndex:100 }}>
       {[{id:'today',label:'TODAY'},{id:'protocols',label:'LEARN'},{id:'stats',label:'STATS'},{id:'profile',label:'PROFILE'}].map(t=><button key={t.id} onClick={()=>{setTab(t.id);if(t.id!=='protocols')setSelectedProtocol(null);}} style={{ padding:'4px 18px',background:'none',border:'none',cursor:'pointer',color:tab===t.id?c.accent:c.textMuted,transition:'color 0.2s',fontFamily:sans,fontSize:11,fontWeight:700,letterSpacing:1.8,position:'relative' }}>{t.label}{tab===t.id&&<div style={{ position:'absolute',top:-14,left:'50%',transform:'translateX(-50)',width:16,height:2,background:c.accent,borderRadius:1 }}/>}</button>)}
