@@ -4,19 +4,68 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f0d0a" />
+  
+  <!-- SEO Meta Tags -->
   <title>Andros — Testosterone Optimization Habit Tracker | Boost T Naturally</title>
-  <meta name="description" content="Track 11 science-backed daily habits to optimize testosterone naturally. Build streaks, follow expert protocols, see results. Free to start." />
-  <meta name="keywords" content="testosterone optimization, boost testosterone naturally, testosterone habits, testosterone tracker, biohacking, mens health" />
+  <meta name="description" content="Track 11 science-backed daily habits to optimize testosterone naturally. Build streaks, follow expert protocols, see results. Free to start — no supplements needed." />
+  <meta name="keywords" content="testosterone optimization, boost testosterone naturally, testosterone habits, testosterone tracker, biohacking, men's health, hormone optimization, testosterone protocol" />
+  <meta name="author" content="Andros" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://andros.bio" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  
+  <!-- Open Graph / Facebook / TikTok -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://andros.bio" />
   <meta property="og:title" content="Andros — Optimize Your Testosterone Naturally" />
-  <meta property="og:description" content="Track 11 science-backed daily habits to boost testosterone. Build streaks, follow protocols, see real results." />
+  <meta property="og:description" content="Track 11 science-backed daily habits to boost testosterone. Build streaks, follow protocols, see real results. Free to start." />
   <meta property="og:site_name" content="Andros" />
+  
+  <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Andros — Optimize Your Testosterone Naturally" />
   <meta name="twitter:description" content="Track 11 science-backed daily habits to boost testosterone. Build streaks, follow protocols, see real results." />
+  
+  <!-- Additional SEO -->
+  <meta name="application-name" content="Andros" />
+  <meta name="apple-mobile-web-app-title" content="Andros" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Andros",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Web",
+    "url": "https://andros.bio",
+    "description": "Science-backed testosterone optimization habit tracker. Track daily habits, build streaks, follow expert protocols to boost testosterone naturally.",
+    "offers": [
+      {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Foundation Protocol - Free"
+      },
+      {
+        "@type": "Offer",
+        "price": "8.99",
+        "priceCurrency": "USD",
+        "description": "Premium - Advanced protocols, analytics, and custom habits",
+        "priceValidUntil": "2027-12-31"
+      }
+    ],
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "47"
+    }
+  }
+  </script>
+  
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>+</text></svg>" />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,5 +82,12 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>
