@@ -648,14 +648,61 @@ function ProtocolsView({ isPremium, onUpgrade, onSelect }) {
   </div>;
 }
 
-function ProfileView({ user, isPremium, onUpgrade, onLogout }) {
+// Notification scheduler
+let notifTimer = null;
+function scheduleNotification(timeStr) {
+  if (notifTimer) clearTimeout(notifTimer);
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const schedule = () => {
+    const [h, m] = timeStr.split(':').map(Number);
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(h, m, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    const ms = target - now;
+    notifTimer = setTimeout(() => {
+      new Notification('Andros Daily Reminder', {
+        body: 'Time to check in on your testosterone optimization habits.',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png'
+      });
+      schedule(); // re-schedule for next day
+    }, ms);
+  };
+  schedule();
+}
+// Auto-start notifications if enabled
+if (typeof window !== 'undefined' && localStorage.getItem('andros_notif') === 'on') {
+  scheduleNotification(localStorage.getItem('andros_notif_time') || '09:00');
+}
+
+function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showNameEdit, setShowNameEdit] = useState(false);
+  const [editName, setEditName] = useState(user.name || '');
+  const [nameMsg, setNameMsg] = useState('');
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [pwMsg, setPwMsg] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+  const [notifEnabled, setNotifEnabled] = useState(localStorage.getItem('andros_notif') !== 'off');
+  const [notifTime, setNotifTime] = useState(localStorage.getItem('andros_notif_time') || '09:00');
+
+  const handleNameSave = async () => {
+    if (!editName.trim()) return;
+    try {
+      if (USE_SUPABASE) {
+        const sb = getSupabase();
+        await sb.update('profiles', { name: editName.trim() }, { eq: { id: user.id } });
+      }
+      if (onUpdateUser) onUpdateUser({ ...user, name: editName.trim() });
+      setNameMsg('Name updated');
+      setTimeout(() => { setShowNameEdit(false); setNameMsg(''); }, 1500);
+    } catch(e) { setNameMsg('Failed to update'); }
+  };
 
   const handlePasswordChange = async () => {
     if (!newPw || newPw.length < 6) { setPwMsg('Password must be at least 6 characters'); return; }
@@ -690,20 +737,69 @@ function ProfileView({ user, isPremium, onUpgrade, onLogout }) {
     } catch(e) { alert('Unable to open subscription management. Contact support@andros.bio'); }
   };
 
+  const handleNotifToggle = async () => {
+    if (!notifEnabled) {
+      // Turning on
+      if ('Notification' in window) {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          setNotifEnabled(true);
+          localStorage.setItem('andros_notif', 'on');
+          scheduleNotification(notifTime);
+        } else {
+          alert('Please enable notifications in your browser settings to use this feature.');
+        }
+      } else {
+        alert('Notifications are not supported in this browser.');
+      }
+    } else {
+      setNotifEnabled(false);
+      localStorage.setItem('andros_notif', 'off');
+    }
+  };
+
+  const handleNotifTimeChange = (t) => {
+    setNotifTime(t);
+    localStorage.setItem('andros_notif_time', t);
+    if (notifEnabled) scheduleNotification(t);
+  };
+
   const inp = { width:'100%',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:8,padding:'12px 14px',fontSize:14,color:c.text,outline:'none',boxSizing:'border-box',fontFamily:sans };
   const sectionStyle = { background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,overflow:'hidden',marginBottom:12 };
   const rowStyle = { display:'flex',justifyContent:'space-between',alignItems:'center',padding:'15px 18px',cursor:'pointer',borderBottom:`1px solid ${c.border}` };
   const rowLabel = { fontSize:14,color:c.text,fontFamily:sans };
   const rowValue = { fontSize:13,color:c.textMuted,fontFamily:sans };
 
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
   return <div style={{ paddingTop:20 }}>
     {/* Avatar & Name */}
     <div style={{ textAlign:'center',marginBottom:24 }}>
       <div style={{ width:72,height:72,borderRadius:'50%',margin:'0 auto 14px',background:`linear-gradient(135deg,${c.accent},${c.accentDim})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:c.bg,fontFamily:serif }}>{user.name?user.name[0].toUpperCase():'?'}</div>
-      <h2 style={{ fontSize:20,fontWeight:400,marginBottom:4,fontFamily:serif,color:c.text }}>{user.name}</h2>
-      <p style={{ fontSize:13,color:c.textSec }}>{user.email}</p>
+      {!showNameEdit ? <div>
+        <h2 style={{ fontSize:20,fontWeight:400,marginBottom:4,fontFamily:serif,color:c.text }}>{user.name}</h2>
+        <button onClick={()=>setShowNameEdit(true)} style={{ background:'none',border:'none',color:c.textMuted,fontSize:11,cursor:'pointer',fontFamily:sans,textDecoration:'underline' }}>Edit name</button>
+      </div> : <div style={{ display:'flex',gap:8,maxWidth:260,margin:'0 auto' }}>
+        <input value={editName} onChange={e=>setEditName(e.target.value)} style={{...inp,fontSize:16,textAlign:'center',padding:'8px 12px'}} />
+        <button onClick={handleNameSave} style={{ background:c.accent,border:'none',borderRadius:8,color:c.bg,fontWeight:700,fontSize:12,padding:'8px 14px',cursor:'pointer',fontFamily:sans,flexShrink:0 }}>Save</button>
+      </div>}
+      {nameMsg&&<p style={{ fontSize:11,color:c.success,marginTop:6,fontFamily:sans }}>{nameMsg}</p>}
+      <p style={{ fontSize:13,color:c.textSec,marginTop:6 }}>{user.email}</p>
       {isPremium&&<div style={{ display:'inline-flex',alignItems:'center',gap:6,background:c.premiumGlow,border:`1px solid ${c.accent}40`,borderRadius:16,padding:'5px 14px',fontSize:12,fontWeight:600,color:c.accent,marginTop:10 }}>+ Premium</div>}
     </div>
+
+    {/* Install prompt - only show if not already installed */}
+    {!isStandalone&&<div style={{ background:c.accentGlow,border:`1px solid ${c.accent}30`,borderRadius:12,padding:18,marginBottom:20,textAlign:'center' }}>
+      <div style={{ fontSize:13,fontWeight:600,color:c.accent,marginBottom:6,fontFamily:sans }}>Install Andros on your phone</div>
+      <p style={{ fontSize:12,color:c.textSec,lineHeight:1.6,marginBottom:10,fontFamily:sans }}>
+        {isIOS ? 'Tap the Share button at the bottom of Safari, then tap "Add to Home Screen"'
+          : isAndroid ? 'Tap the three dots menu in Chrome, then "Add to Home Screen"'
+          : 'Use your browser menu to "Add to Home Screen" or "Install App"'}
+      </p>
+      <p style={{ fontSize:11,color:c.textMuted,fontFamily:sans }}>Opens fullscreen — just like a real app</p>
+    </div>}
 
     {/* Subscription */}
     <div style={{ fontSize:11,fontWeight:600,color:c.textMuted,textTransform:'uppercase',letterSpacing:1.5,marginBottom:8,paddingLeft:4,fontFamily:sans }}>Subscription</div>
@@ -740,6 +836,21 @@ function ProfileView({ user, isPremium, onUpgrade, onLogout }) {
         </div>
         <button onClick={handlePasswordChange} disabled={pwLoading} style={{ width:'100%',padding:12,borderRadius:8,border:'none',background:c.accent,color:c.bg,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:sans,opacity:pwLoading?0.6:1 }}>{pwLoading?'Updating...':'Update Password'}</button>
         {pwMsg&&<p style={{ fontSize:12,marginTop:8,color:pwMsg.includes('success')?c.success:c.danger,fontFamily:sans,textAlign:'center' }}>{pwMsg}</p>}
+      </div>}
+    </div>
+
+    {/* Notifications */}
+    <div style={{ fontSize:11,fontWeight:600,color:c.textMuted,textTransform:'uppercase',letterSpacing:1.5,marginBottom:8,paddingLeft:4,fontFamily:sans,marginTop:20 }}>Notifications</div>
+    <div style={sectionStyle}>
+      <div style={{...rowStyle}} onClick={handleNotifToggle}>
+        <span style={rowLabel}>Daily Reminder</span>
+        <div style={{ width:44,height:24,borderRadius:12,background:notifEnabled?c.accent:c.bgElevated,border:`1px solid ${notifEnabled?c.accent:c.border}`,position:'relative',transition:'all 0.2s',cursor:'pointer' }}>
+          <div style={{ width:20,height:20,borderRadius:10,background:notifEnabled?c.bg:'#555',position:'absolute',top:1,left:notifEnabled?22:1,transition:'all 0.2s' }}/>
+        </div>
+      </div>
+      {notifEnabled&&<div style={{...rowStyle, borderBottom:'none'}}>
+        <span style={rowLabel}>Reminder Time</span>
+        <input type="time" value={notifTime} onChange={e=>handleNotifTimeChange(e.target.value)} style={{ background:c.bgElevated,border:`1px solid ${c.border}`,borderRadius:6,padding:'6px 10px',color:c.text,fontSize:13,fontFamily:sans,outline:'none' }} />
       </div>}
     </div>
 
@@ -948,7 +1059,7 @@ export default function App() {
       </div>}
       {tab==='protocols'&&(selectedProtocol?<ProtocolDetail protocol={selectedProtocol} onBack={()=>setSelectedProtocol(null)} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />:<ProtocolsView isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onSelect={setSelectedProtocol} />)}
       {tab==='stats'&&<StatsView checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />}
-      {tab==='profile'&&<ProfileView user={user} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onLogout={handleLogout} />}
+      {tab==='profile'&&<ProfileView user={user} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onLogout={handleLogout} onUpdateUser={setUser} />}
     </main>
     <nav style={{ position:'fixed',bottom:0,left:0,right:0,display:'flex',justifyContent:'space-around',background:'rgba(15,13,10,0.97)',borderTop:`1px solid ${c.border}`,padding:'14px 0 18px',zIndex:100 }}>
       {[{id:'today',label:'TODAY'},{id:'protocols',label:'LEARN'},{id:'stats',label:'STATS'},{id:'profile',label:'PROFILE'}].map(t=><button key={t.id} onClick={()=>{setTab(t.id);if(t.id!=='protocols')setSelectedProtocol(null);}} style={{ padding:'4px 18px',background:'none',border:'none',cursor:'pointer',color:tab===t.id?c.accent:c.textMuted,transition:'color 0.2s',fontFamily:sans,fontSize:11,fontWeight:700,letterSpacing:1.8,position:'relative' }}>{t.label}{tab===t.id&&<div style={{ position:'absolute',top:-14,left:'50%',transform:'translateX(-50)',width:16,height:2,background:c.accent,borderRadius:1 }}/>}</button>)}
