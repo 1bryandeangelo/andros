@@ -480,17 +480,84 @@ function SleepTracker({ sleepLog, onLogSleep }) {
   </div>;
 }
 
+const BADGES = [
+  { id: 'first', name: 'First Step', desc: 'Complete your first day', icon: '🌱', check: (ck) => Object.keys(ck).length >= 1 },
+  { id: 'streak3', name: '3-Day Streak', desc: 'Maintain streak for 3 days', icon: '🔥', check: (ck, str) => str >= 3 },
+  { id: 'streak7', name: 'One Week Strong', desc: '7-day streak', icon: '💪', check: (ck, str) => str >= 7 },
+  { id: 'streak14', name: 'Two Week Warrior', desc: '14-day streak', icon: '⚔️', check: (ck, str) => str >= 14 },
+  { id: 'streak30', name: 'Monthly Master', desc: '30-day streak', icon: '🏆', check: (ck, str) => str >= 30 },
+  { id: 'streak60', name: 'Habit Forged', desc: '60-day streak (habit is automatic)', icon: '⚡', check: (ck, str) => str >= 60 },
+  { id: 'streak100', name: 'Century Club', desc: '100-day streak', icon: '💯', check: (ck, str) => str >= 100 },
+  { id: 'perfect', name: 'Perfect Day', desc: 'Complete all 11 habits in one day', icon: '✨', check: (ck) => Object.values(ck).some(d => d.length >= 11) },
+  { id: 'week5', name: 'Consistent', desc: '5+ habits every day for a week', icon: '📈', check: (ck) => { for(let i=0;i<7;i++){const d=ck[getDateStr(i)]||[];if(d.length<5)return false;} return Object.keys(ck).length>=7; } },
+  { id: 'total100', name: 'Centurion', desc: 'Log 100 total habit completions', icon: '🎯', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 100 },
+  { id: 'total500', name: 'Relentless', desc: '500 total habit completions', icon: '👑', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 500 },
+  { id: 'total1000', name: 'Legendary', desc: '1000 total completions', icon: '🏅', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 1000 },
+];
+
 function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade }) {
   const last7 = Array.from({length:7},(_,i)=>{ const d=getDateStr(6-i); return { date:d, count:(checkins[d]||[]).length, mood:moodLog[d]?moodLog[d].value:null, sleep:sleepLog[d]?sleepLog[d].hours:null, day:new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'narrow'}) }; });
   const totalDays = Object.keys(checkins).length;
-  const avg = totalDays>0?(Object.values(checkins).reduce((s,d)=>s+d.length,0)/totalDays).toFixed(1):'0';
+  const totalHabits = Object.values(checkins).reduce((s,d)=>s+d.length,0);
+  const avg = totalDays>0?(totalHabits/totalDays).toFixed(1):'0';
+  const streak = calculateStreak(checkins);
+  const level = getLevel(totalHabits);
+  const nextLevel = getNextLevel(totalHabits);
+  const progress = nextLevel ? ((totalHabits - level.minScore) / (nextLevel.minScore - level.minScore)) * 100 : 100;
+  const earnedBadges = BADGES.filter(b => b.check(checkins, streak));
+  const lockedBadges = BADGES.filter(b => !b.check(checkins, streak));
+  const bestDay = Object.entries(checkins).reduce((best, [d, arr]) => arr.length > (best.count||0) ? { date: d, count: arr.length } : best, { count: 0 });
+
   return <div>
     <h2 style={{ fontSize:20,fontWeight:400,marginBottom:20,color:c.text,fontFamily:serif }}>Your Progress</h2>
-    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:18 }}>{[{v:totalDays,l:'Days Tracked'},{v:avg,l:'Avg Habits/Day'}].map((s,i)=><div key={i} style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18 }}><div style={{ fontSize:26,fontWeight:700,fontFamily:serif,color:c.text }}>{s.v}</div><div style={{ fontSize:11,color:c.textSec,textTransform:'uppercase',letterSpacing:0.5,marginTop:6,fontFamily:sans }}>{s.l}</div></div>)}</div>
-    <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:18 }}>
+
+    {/* Streak - Big and prominent */}
+    <div style={{ background:c.bgCard,border:`1px solid ${streak>=3?c.accent+'40':c.border}`,borderRadius:16,padding:24,marginBottom:14,textAlign:'center' }}>
+      <div style={{ fontSize:52,fontWeight:700,fontFamily:serif,color:streak>0?c.accent:c.textMuted,lineHeight:1 }}>{streak}</div>
+      <div style={{ fontSize:13,color:c.textSec,marginTop:6,fontFamily:sans,fontWeight:500 }}>day streak {streak>0?'🔥':''}</div>
+      {streak>=7&&<div style={{ marginTop:10,fontSize:11,color:c.accent,fontWeight:600,fontFamily:sans }}>{streak>=30?'Unstoppable.':streak>=14?'Building real momentum.':'Keep it going!'}</div>}
+    </div>
+
+    {/* Level progress */}
+    <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:14 }}>
+      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10 }}>
+        <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+          <span style={{ fontSize:20 }}>{level.icon}</span>
+          <div><div style={{ fontSize:14,fontWeight:700,color:c.text,fontFamily:sans }}>{level.name}</div><div style={{ fontSize:11,color:c.textMuted,fontFamily:sans }}>{totalHabits} total habits logged</div></div>
+        </div>
+        {nextLevel&&<div style={{ textAlign:'right' }}><div style={{ fontSize:11,color:c.textMuted,fontFamily:sans }}>Next: {nextLevel.name}</div><div style={{ fontSize:11,color:c.accent,fontFamily:sans }}>{nextLevel.minScore - totalHabits} to go</div></div>}
+      </div>
+      <div style={{ height:6,background:c.bgElevated,borderRadius:3,overflow:'hidden' }}><div style={{ height:'100%',borderRadius:3,width:Math.min(progress,100)+'%',background:`linear-gradient(90deg,${c.accent},${c.accentBright})`,transition:'width 0.4s ease' }}/></div>
+    </div>
+
+    {/* Quick stats */}
+    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14 }}>
+      {[{v:totalDays,l:'Days'},{v:avg,l:'Avg/Day'},{v:bestDay.count,l:'Best Day'}].map((s,i)=><div key={i} style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:14,textAlign:'center' }}><div style={{ fontSize:22,fontWeight:700,fontFamily:serif,color:c.text }}>{s.v}</div><div style={{ fontSize:10,color:c.textSec,textTransform:'uppercase',letterSpacing:0.5,marginTop:4,fontFamily:sans }}>{s.l}</div></div>)}
+    </div>
+
+    {/* Last 7 days chart */}
+    <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:14 }}>
       <h3 style={{ fontSize:14,fontWeight:600,marginBottom:14,color:c.text,fontFamily:sans }}>Last 7 Days</h3>
       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-end',height:110,gap:6 }}>{last7.map((d,i)=><div key={i} style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:6,height:'100%' }}><div style={{ flex:1,width:'100%',background:c.bgElevated,borderRadius:4,display:'flex',alignItems:'flex-end',overflow:'hidden' }}><div style={{ width:'100%',borderRadius:4,minHeight:2,height:d.count>0?((d.count/11)*100)+'%':'2px',background:d.count>=STREAK_THRESHOLD?c.accent:c.borderLight,transition:'height 0.4s ease' }} /></div><span style={{ fontSize:10,color:c.textMuted,fontWeight:500,fontFamily:sans }}>{d.day}</span></div>)}</div>
     </div>
+
+    {/* Badges */}
+    <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:14 }}>
+      <h3 style={{ fontSize:14,fontWeight:600,marginBottom:4,color:c.text,fontFamily:sans }}>Badges</h3>
+      <p style={{ fontSize:11,color:c.textMuted,marginBottom:14,fontFamily:sans }}>{earnedBadges.length} of {BADGES.length} earned</p>
+      <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8 }}>
+        {earnedBadges.map(b=><div key={b.id} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:10,borderRadius:10,background:c.accentGlow,border:`1px solid ${c.accent}30` }}>
+          <span style={{ fontSize:24 }}>{b.icon}</span>
+          <span style={{ fontSize:9,color:c.accent,fontFamily:sans,textAlign:'center',fontWeight:600,lineHeight:1.2 }}>{b.name}</span>
+        </div>)}
+        {lockedBadges.slice(0,Math.max(0,8-earnedBadges.length)).map(b=><div key={b.id} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:10,borderRadius:10,background:c.bgElevated,border:`1px solid ${c.border}`,opacity:0.4 }}>
+          <span style={{ fontSize:24,filter:'grayscale(1)' }}>{b.icon}</span>
+          <span style={{ fontSize:9,color:c.textMuted,fontFamily:sans,textAlign:'center',lineHeight:1.2 }}>{b.name}</span>
+        </div>)}
+      </div>
+    </div>
+
+    {/* Premium analytics or upsell */}
     {!isPremium?<div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:'28px 22px',textAlign:'center' }}><div style={{ fontSize:24,marginBottom:12,color:c.textMuted }}>🔒</div><h3 style={{ fontSize:16,fontWeight:700,marginBottom:8,color:c.text,fontFamily:sans }}>Premium Analytics</h3><p style={{ fontSize:13,color:c.textSec,lineHeight:1.5,marginBottom:22,fontFamily:sans }}>Unlock mood correlations, sleep trends, and detailed reports.</p><button onClick={onUpgrade} style={{ cursor:'pointer',background:c.bgElevated,border:`1px solid ${c.accent}50`,color:c.text,fontWeight:600,fontSize:13,padding:'12px 22px',borderRadius:10,fontFamily:sans }}>Unlock Premium — $8.99/mo</button><p style={{ fontSize:11,color:c.textMuted,marginTop:10,fontFamily:sans }}>7-day free trial</p></div>
     :<div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18 }}><h3 style={{ fontSize:14,fontWeight:600,marginBottom:14,color:c.text,fontFamily:sans }}>Mood vs Habits</h3>{last7.map((d,i)=><div key={i} style={{ display:'grid',gridTemplateColumns:'36px 1fr 28px 36px',alignItems:'center',gap:8,marginBottom:7 }}><span style={{ fontSize:11,color:c.textSec,fontFamily:sans }}>{d.day}</span><div style={{ height:7,background:c.bgElevated,borderRadius:4,overflow:'hidden' }}><div style={{ height:'100%',borderRadius:4,width:d.count>0?((d.count/11)*100)+'%':'0%',background:c.accent,transition:'width 0.4s ease' }} /></div><span style={{ fontSize:14,textAlign:'center' }}>{d.mood?MOOD_OPTIONS.find(m=>m.value===d.mood).emoji:'—'}</span><span style={{ fontSize:10,color:c.textSec,fontFamily:'monospace',textAlign:'right' }}>{d.sleep?d.sleep+'h':'—'}</span></div>)}<div style={{ display:'flex',justifyContent:'center',gap:14,marginTop:14,fontSize:11,color:c.textSec,fontFamily:sans }}><span><span style={{ color:c.accent }}>■</span> Habits</span><span>😀 Mood</span><span>💤 Sleep</span></div></div>}
   </div>;
@@ -511,10 +578,73 @@ function ProtocolDetail({ protocol, onBack, isPremium, onUpgrade }) {
   </div>;
 }
 
+const T_EDUCATION = [
+  { id: 'what', title: 'What Is Testosterone?', content: 'Testosterone is the primary male sex hormone and anabolic steroid. It plays a key role in muscle mass, bone density, body hair, red blood cell production, mood regulation, and sex drive. Women also produce testosterone in smaller amounts. It\'s made primarily in the Leydig cells of the testes, with small amounts from the adrenal glands.', icon: '🧬' },
+  { id: 'how', title: 'How Your Body Makes It', content: 'It starts in the brain. Your hypothalamus releases GnRH (gonadotropin-releasing hormone), which signals the pituitary gland to release LH (luteinizing hormone) and FSH. LH travels to the testes and tells the Leydig cells to convert cholesterol into testosterone. This is why dietary fat, sleep, and stress management are critical — they directly affect this signaling chain. Cholesterol → pregnenolone → DHEA → androstenedione → testosterone.', icon: '⚙️' },
+  { id: 'does', title: 'What Testosterone Does', content: 'Builds and maintains muscle mass and strength. Regulates fat distribution (less belly fat at healthy levels). Drives libido and sexual function. Supports bone mineral density. Produces red blood cells (energy, endurance). Influences mood, confidence, motivation, and cognitive sharpness. Supports sperm production and fertility.', icon: '⚡' },
+  { id: 'doesnt', title: 'What It Doesn\'t Do', content: 'Testosterone alone doesn\'t make you aggressive — that\'s largely a myth. It doesn\'t guarantee muscle growth without exercise. It\'s not a personality trait. Having high T doesn\'t automatically mean better health if other markers are off. And it\'s only one piece of the hormonal puzzle — cortisol, estrogen, SHBG, thyroid hormones, and insulin all interact with testosterone.', icon: '🚫' },
+  { id: 'low', title: 'Signs of Low Testosterone', content: 'Persistent fatigue even with adequate sleep. Reduced sex drive or erectile difficulty. Loss of muscle mass or difficulty building muscle. Increased body fat, especially around the midsection. Brain fog, poor concentration, memory issues. Mood changes — irritability, low motivation, depression. Decreased bone density. Sleep disturbances. Reduced facial and body hair growth over time.', icon: '📉' },
+  { id: 'high', title: 'Too Much Testosterone', content: 'Excess testosterone (usually from external sources) can convert to estrogen via aromatase, causing gynecomastia. It can increase red blood cell count to dangerous levels (polycythemia). Other risks include acne, hair loss, mood swings, aggression, sleep apnea, reduced sperm count, and testicular shrinkage. This is why Andros focuses on natural optimization — your body has feedback loops that prevent overproduction.', icon: '📈' },
+];
+
+const SOURCES = [
+  { title: 'Sleep restriction and testosterone', source: 'Leproult & Van Cauter, JAMA 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21632481/' },
+  { title: 'Resistance training and testosterone response', source: 'Kraemer & Ratamess, Sports Medicine 2005', url: 'https://pubmed.ncbi.nlm.nih.gov/15831061/' },
+  { title: 'Vitamin D supplementation and testosterone', source: 'Pilz et al., Hormone & Metabolic Research 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21154195/' },
+  { title: 'Ashwagandha and male reproductive health', source: 'Chauhan et al., Am J Men\'s Health 2023', url: 'https://pubmed.ncbi.nlm.nih.gov/36655469/' },
+  { title: 'Diet composition and testosterone', source: 'Whittaker & Harris, J Steroid Biochem Mol Biol 2022', url: 'https://pubmed.ncbi.nlm.nih.gov/35015858/' },
+  { title: 'Cold exposure and catecholamines', source: 'Srámek et al., European J Applied Physiology 2000', url: 'https://pubmed.ncbi.nlm.nih.gov/10751106/' },
+  { title: 'BPA exposure and male hormones', source: 'Meeker et al., Fertility & Sterility 2010', url: 'https://pubmed.ncbi.nlm.nih.gov/19328465/' },
+  { title: 'Sprint training and testosterone', source: 'Hackney et al., J Strength Cond Research 2012', url: 'https://pubmed.ncbi.nlm.nih.gov/22228111/' },
+  { title: 'Intermittent fasting and growth hormone', source: 'Ho et al., J Clinical Investigation 1988', url: 'https://pubmed.ncbi.nlm.nih.gov/3127426/' },
+  { title: 'Habit formation timeline (66 days)', source: 'Lally et al., European J Social Psychology 2010', url: 'https://pubmed.ncbi.nlm.nih.gov/20674467/' },
+];
+
 function ProtocolsView({ isPremium, onUpgrade, onSelect }) {
-  return <div><h2 style={{ fontSize:20,fontWeight:400,marginBottom:6,color:c.text,fontFamily:serif }}>Protocols</h2><p style={{ fontSize:13,color:c.textSec,marginBottom:22,lineHeight:1.5,fontFamily:sans }}>Follow in order for best results.</p>
-    {PROTOCOLS.map(pr=>{const lk=pr.tier==='premium'&&!isPremium; return <button key={pr.id} onClick={()=>onSelect(pr)} style={{ width:'100%',textAlign:'left',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:14 }}><div style={{ width:48,height:48,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,background:c.bgElevated,border:`1px solid ${c.borderLight}`,flexShrink:0 }}>{pr.icon}</div><div style={{ flex:1 }}><div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:3 }}><span style={{ fontSize:15,fontWeight:700,color:c.text,fontFamily:sans }}>{pr.title}</span>{lk&&<span style={{ fontSize:12,color:c.accent }}>🔒</span>}</div><div style={{ fontSize:12,color:c.textMuted,fontFamily:sans }}>{pr.level} · {pr.duration}</div></div><span style={{ color:c.textMuted,fontSize:16,flexShrink:0 }}>›</span></button>;})}
-    {!isPremium&&<div style={{ background:c.accentGlow,border:`1px solid ${c.accent}25`,borderRadius:12,padding:18,textAlign:'center',marginTop:8 }}><p style={{ fontSize:13,color:c.textSec,marginBottom:10,fontFamily:sans }}>Unlock all protocols with Premium</p><button onClick={onUpgrade} style={{ cursor:'pointer',background:c.accent,border:'none',color:c.bg,fontWeight:700,fontSize:13,padding:'11px 22px',borderRadius:8,fontFamily:sans }}>Start Free Trial — $8.99/mo</button></div>}
+  const [learnTab, setLearnTab] = useState('protocols');
+  const [expandedEdu, setExpandedEdu] = useState(null);
+
+  return <div>
+    <h2 style={{ fontSize:20,fontWeight:400,marginBottom:16,color:c.text,fontFamily:serif }}>Learn</h2>
+    <div style={{ display:'flex',gap:0,marginBottom:22,background:c.bgCard,borderRadius:10,border:`1px solid ${c.border}`,overflow:'hidden' }}>
+      {[{id:'protocols',label:'Protocols'},{id:'education',label:'Testosterone 101'},{id:'sources',label:'Sources'}].map(t=>
+        <button key={t.id} onClick={()=>setLearnTab(t.id)} style={{ flex:1,padding:'11px 8px',background:learnTab===t.id?c.bgElevated:'transparent',border:'none',cursor:'pointer',color:learnTab===t.id?c.accent:c.textMuted,fontSize:11,fontWeight:600,fontFamily:sans,letterSpacing:0.3,transition:'all 0.2s',borderBottom:learnTab===t.id?`2px solid ${c.accent}`:'2px solid transparent' }}>{t.label}</button>
+      )}
+    </div>
+
+    {learnTab==='protocols'&&<div>
+      <p style={{ fontSize:13,color:c.textSec,marginBottom:18,lineHeight:1.5,fontFamily:sans }}>Follow in order for best results.</p>
+      {PROTOCOLS.map(pr=>{const lk=pr.tier==='premium'&&!isPremium; return <button key={pr.id} onClick={()=>onSelect(pr)} style={{ width:'100%',textAlign:'left',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:14 }}><div style={{ width:48,height:48,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,background:c.bgElevated,border:`1px solid ${c.borderLight}`,flexShrink:0 }}>{pr.icon}</div><div style={{ flex:1 }}><div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:3 }}><span style={{ fontSize:15,fontWeight:700,color:c.text,fontFamily:sans }}>{pr.title}</span>{lk&&<span style={{ fontSize:12,color:c.accent }}>🔒</span>}</div><div style={{ fontSize:12,color:c.textMuted,fontFamily:sans }}>{pr.level} · {pr.duration}</div></div><span style={{ color:c.textMuted,fontSize:16,flexShrink:0 }}>›</span></button>;})}
+      {!isPremium&&<div style={{ background:c.accentGlow,border:`1px solid ${c.accent}25`,borderRadius:12,padding:18,textAlign:'center',marginTop:8 }}><p style={{ fontSize:13,color:c.textSec,marginBottom:10,fontFamily:sans }}>Unlock all protocols with Premium</p><button onClick={onUpgrade} style={{ cursor:'pointer',background:c.accent,border:'none',color:c.bg,fontWeight:700,fontSize:13,padding:'11px 22px',borderRadius:8,fontFamily:sans }}>Start Free Trial — $8.99/mo</button></div>}
+    </div>}
+
+    {learnTab==='education'&&<div>
+      {T_EDUCATION.map(item=><div key={item.id} style={{ background:c.bgCard,border:`1px solid ${expandedEdu===item.id?c.accent+'40':c.border}`,borderRadius:12,marginBottom:10,overflow:'hidden',transition:'border-color 0.2s' }}>
+        <button onClick={()=>setExpandedEdu(expandedEdu===item.id?null:item.id)} style={{ width:'100%',display:'flex',alignItems:'center',gap:14,padding:'16px 18px',background:'none',border:'none',cursor:'pointer',textAlign:'left' }}>
+          <span style={{ fontSize:22 }}>{item.icon}</span>
+          <span style={{ flex:1,fontSize:15,fontWeight:600,color:c.text,fontFamily:sans }}>{item.title}</span>
+          <span style={{ color:c.textMuted,fontSize:16,transform:expandedEdu===item.id?'rotate(90deg)':'rotate(0)',transition:'transform 0.2s' }}>›</span>
+        </button>
+        {expandedEdu===item.id&&<div style={{ padding:'0 18px 18px' }}>
+          {item.content.split('. ').reduce((acc, sentence, i, arr) => {
+            const text = sentence + (i < arr.length - 1 ? '.' : '');
+            if (text.trim()) acc.push(text);
+            return acc;
+          }, []).map((line, i) => <div key={i} style={{ display:'flex',alignItems:'flex-start',gap:8,marginBottom:8 }}>
+            <span style={{ color:c.accent,fontSize:14,fontWeight:300,marginTop:1,flexShrink:0 }}>+</span>
+            <span style={{ fontSize:13,lineHeight:1.7,color:c.textSec,fontFamily:sans }}>{line.trim()}</span>
+          </div>)}
+        </div>}
+      </div>)}
+    </div>}
+
+    {learnTab==='sources'&&<div>
+      <p style={{ fontSize:13,color:c.textSec,marginBottom:18,lineHeight:1.5,fontFamily:sans }}>The science behind every protocol and habit in Andros. Tap any study to read the full paper.</p>
+      {SOURCES.map((s,i)=><a key={i} href={s.url} target="_blank" rel="noopener noreferrer" style={{ display:'block',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:16,marginBottom:8,textDecoration:'none',transition:'border-color 0.2s' }}>
+        <div style={{ fontSize:13,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:4 }}>{s.title}</div>
+        <div style={{ fontSize:11,color:c.textMuted,fontFamily:sans }}>{s.source}</div>
+      </a>)}
+    </div>}
   </div>;
 }
 
