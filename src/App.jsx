@@ -418,11 +418,52 @@ function HabitCard({ habit, checked, onToggle, onShowScience }) {
   </div>;
 }
 
+const LOW_T_SYMPTOMS = [
+  { id: 'tired', label: 'Tired/Fatigued', icon: '💤' },
+  { id: 'brainfog', label: 'Brain Fog', icon: '🌫' },
+  { id: 'irritable', label: 'Irritable', icon: '😤' },
+  { id: 'lowlibido', label: 'Low Libido', icon: '📉' },
+  { id: 'anxious', label: 'Anxious', icon: '😰' },
+  { id: 'motivated', label: 'Motivated', icon: '⚡' },
+  { id: 'confident', label: 'Confident', icon: '💪' },
+  { id: 'focused', label: 'Focused', icon: '🎯' },
+];
+
 function MoodTracker({ moodLog, onLogMood }) {
   const tm = moodLog[getToday()];
+  const [selectedSymptoms, setSelectedSymptoms] = useState(tm?.symptoms || []);
+  const [note, setNote] = useState(tm?.note || '');
+  const [expanded, setExpanded] = useState(!tm);
+
+  const toggleSymptom = (id) => {
+    setSelectedSymptoms(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+  };
+
+  const handleMoodSelect = (value) => {
+    onLogMood(value, selectedSymptoms, note);
+  };
+
   return <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:20 }}>
-    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}><h3 style={{ fontSize:15,fontWeight:600,color:c.text,fontFamily:sans }}>How are you feeling?</h3>{tm&&<span style={{ fontSize:11,color:c.success,fontWeight:600,fontFamily:sans }}>✓ Logged</span>}</div>
-    <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8 }}>{MOOD_OPTIONS.map(m=><button key={m.value} onClick={()=>onLogMood(m.value)} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:5,padding:'12px 6px',borderRadius:8,cursor:'pointer',border:`1px solid ${tm&&tm.value===m.value?c.accent+'60':c.border}`,background:tm&&tm.value===m.value?c.accentGlow:c.bgElevated,transform:tm&&tm.value===m.value?'scale(1.04)':'scale(1)',transition:'all 0.2s ease' }}><span style={{ fontSize:22 }}>{m.emoji}</span><span style={{ fontSize:10,color:c.textSec,fontFamily:sans }}>{m.label}</span></button>)}</div>
+    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4 }}>
+      <h3 style={{ fontSize:15,fontWeight:600,color:c.text,fontFamily:sans }}>Daily Check-in</h3>
+      {tm&&<span style={{ fontSize:11,color:c.success,fontWeight:600,fontFamily:sans }}>+ Logged</span>}
+    </div>
+    <p style={{ fontSize:12,color:c.textMuted,marginBottom:16,fontFamily:sans }}>Track how you feel to spot patterns over time</p>
+
+    <div style={{ fontSize:12,fontWeight:600,color:c.textSec,marginBottom:10,fontFamily:sans,textTransform:'uppercase',letterSpacing:1 }}>Mood</div>
+    <div style={{ display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:6,marginBottom:20 }}>{MOOD_OPTIONS.map(m=><button key={m.value} onClick={()=>handleMoodSelect(m.value)} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'10px 2px',borderRadius:8,cursor:'pointer',border:`1px solid ${tm&&tm.value===m.value?c.accent+'60':c.border}`,background:tm&&tm.value===m.value?c.accentGlow:c.bgElevated,transform:tm&&tm.value===m.value?'scale(1.06)':'scale(1)',transition:'all 0.2s ease' }}><span style={{ fontSize:20 }}>{m.emoji}</span><span style={{ fontSize:9,color:tm&&tm.value===m.value?c.accent:c.textSec,fontFamily:sans }}>{m.label}</span></button>)}</div>
+
+    <button onClick={()=>setExpanded(!expanded)} style={{ width:'100%',background:'none',border:'none',cursor:'pointer',color:c.textMuted,fontSize:11,fontFamily:sans,padding:'6px 0',display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
+      <span>{expanded?'Hide':'Show'} symptoms & notes</span><span style={{ fontSize:8,transform:expanded?'rotate(180deg)':'rotate(0)',transition:'transform 0.2s' }}>▼</span>
+    </button>
+
+    {expanded&&<div style={{ marginTop:12 }}>
+      <div style={{ fontSize:12,fontWeight:600,color:c.textSec,marginBottom:10,fontFamily:sans,textTransform:'uppercase',letterSpacing:1 }}>How are you feeling?</div>
+      <div style={{ display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6,marginBottom:18 }}>{LOW_T_SYMPTOMS.map(s=><button key={s.id} onClick={()=>toggleSymptom(s.id)} style={{ display:'flex',alignItems:'center',gap:8,padding:'10px 12px',borderRadius:8,cursor:'pointer',border:`1px solid ${selectedSymptoms.includes(s.id)?c.accent+'60':c.border}`,background:selectedSymptoms.includes(s.id)?c.accentGlow:c.bgElevated,transition:'all 0.2s ease',textAlign:'left' }}><span style={{ fontSize:14 }}>{s.icon}</span><span style={{ fontSize:12,color:selectedSymptoms.includes(s.id)?c.accent:c.textSec,fontFamily:sans,fontWeight:selectedSymptoms.includes(s.id)?600:400 }}>{s.label}</span></button>)}</div>
+
+      <div style={{ fontSize:12,fontWeight:600,color:c.textSec,marginBottom:10,fontFamily:sans,textTransform:'uppercase',letterSpacing:1 }}>Notes</div>
+      <textarea value={note} onChange={e=>setNote(e.target.value)} onBlur={()=>{if(tm)onLogMood(tm.value,selectedSymptoms,note);}} placeholder="Anything else? (workout, diet, stress, etc.)" style={{ width:'100%',minHeight:70,padding:12,borderRadius:8,border:`1px solid ${c.border}`,background:c.bgElevated,color:c.text,fontSize:13,fontFamily:sans,resize:'vertical',outline:'none' }} />
+    </div>}
   </div>;
 }
 
@@ -566,9 +607,9 @@ export default function App() {
     await DataLayer.toggleCheckin(user.id,habitId,todayStr,checked);
   };
 
-  const logMood = async (value) => {
+  const logMood = async (value, symptoms = [], note = '') => {
     const todayStr = getToday();
-    setMoodLog(prev=>({...prev,[todayStr]:{value,time:new Date().toISOString()}}));
+    setMoodLog(prev=>({...prev,[todayStr]:{value,symptoms,note,time:new Date().toISOString()}}));
     await DataLayer.logMood(user.id,todayStr,value);
   };
 
@@ -622,8 +663,8 @@ export default function App() {
         <button onClick={handleLogout} style={{ width:'100%',padding:13,borderRadius:10,cursor:'pointer',border:`1px solid ${c.border}`,background:'none',color:c.danger,fontSize:14,fontWeight:500,fontFamily:sans }}>Log Out</button>
       </div>}
     </main>
-    <nav style={{ position:'fixed',bottom:0,left:0,right:0,display:'flex',justifyContent:'space-around',background:'rgba(15,13,10,0.95)',borderTop:`1px solid ${c.border}`,padding:'9px 0 13px',zIndex:100 }}>
-      {[{id:'today',label:'Today',icon:'+'},{id:'protocols',label:'Learn',icon:'📖'},{id:'stats',label:'Stats',icon:'📊'},{id:'profile',label:'Profile',icon:'👤'}].map(t=><button key={t.id} onClick={()=>{setTab(t.id);if(t.id!=='protocols')setSelectedProtocol(null);}} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'5px 16px',background:'none',border:'none',cursor:'pointer',color:tab===t.id?c.accent:c.textMuted,transition:'color 0.2s' }}><span style={{ fontSize:t.icon==='+'?22:18,fontWeight:t.icon==='+'?300:400 }}>{t.icon}</span><span style={{ fontSize:10,fontWeight:500 }}>{t.label}</span></button>)}
+    <nav style={{ position:'fixed',bottom:0,left:0,right:0,display:'flex',justifyContent:'space-around',background:'rgba(15,13,10,0.97)',borderTop:`1px solid ${c.border}`,padding:'14px 0 18px',zIndex:100 }}>
+      {[{id:'today',label:'TODAY'},{id:'protocols',label:'LEARN'},{id:'stats',label:'STATS'},{id:'profile',label:'PROFILE'}].map(t=><button key={t.id} onClick={()=>{setTab(t.id);if(t.id!=='protocols')setSelectedProtocol(null);}} style={{ padding:'4px 18px',background:'none',border:'none',cursor:'pointer',color:tab===t.id?c.accent:c.textMuted,transition:'color 0.2s',fontFamily:sans,fontSize:11,fontWeight:700,letterSpacing:1.8,position:'relative' }}>{t.label}{tab===t.id&&<div style={{ position:'absolute',top:-14,left:'50%',transform:'translateX(-50)',width:16,height:2,background:c.accent,borderRadius:1 }}/>}</button>)}
     </nav>
     {scienceHabit&&<ScienceModal habit={scienceHabit} onClose={()=>setScienceHabit(null)} />}
     {showPremium&&<PremiumModal onClose={()=>setShowPremium(false)} onUpgrade={handleUpgrade} user={user} />}
