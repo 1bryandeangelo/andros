@@ -582,21 +582,101 @@ function SleepTracker({ sleepLog, onLogSleep }) {
 }
 
 const BADGES = [
-  { id: 'first', name: 'First Step', desc: 'Complete your first day', icon: '🌱', check: (ck) => Object.keys(ck).length >= 1 },
-  { id: 'streak3', name: '3-Day Streak', desc: 'Maintain streak for 3 days', icon: '🔥', check: (ck, str) => str >= 3 },
-  { id: 'streak7', name: 'One Week Strong', desc: '7-day streak', icon: '💪', check: (ck, str) => str >= 7 },
-  { id: 'streak14', name: 'Two Week Warrior', desc: '14-day streak', icon: '⚔️', check: (ck, str) => str >= 14 },
-  { id: 'streak30', name: 'Monthly Master', desc: '30-day streak', icon: '🏆', check: (ck, str) => str >= 30 },
-  { id: 'streak60', name: 'Habit Forged', desc: '60-day streak (habit is automatic)', icon: '⚡', check: (ck, str) => str >= 60 },
-  { id: 'streak100', name: 'Century Club', desc: '100-day streak', icon: '💯', check: (ck, str) => str >= 100 },
-  { id: 'perfect', name: 'Perfect Day', desc: 'Complete all 11 habits in one day', icon: '✨', check: (ck) => Object.values(ck).some(d => d.length >= 11) },
-  { id: 'week5', name: 'Consistent', desc: '5+ habits every day for a week', icon: '📈', check: (ck) => { for(let i=0;i<7;i++){const d=ck[getDateStr(i)]||[];if(d.length<5)return false;} return Object.keys(ck).length>=7; } },
-  { id: 'total100', name: 'Centurion', desc: 'Log 100 total habit completions', icon: '🎯', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 100 },
-  { id: 'total500', name: 'Relentless', desc: '500 total habit completions', icon: '👑', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 500 },
-  { id: 'total1000', name: 'Legendary', desc: '1000 total completions', icon: '🏅', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 1000 },
+  // Streak badges
+  { id: 'first', name: 'First Step', desc: 'Complete your first day', symbol: '1', color: '#6ab06a', check: (ck) => Object.keys(ck).length >= 1 },
+  { id: 'streak3', name: '3-Day Fire', desc: 'Maintain streak for 3 days', symbol: '3', color: '#d4a44a', check: (ck, str) => str >= 3 },
+  { id: 'streak7', name: 'Week Strong', desc: '7-day streak', symbol: '7', color: '#d4a44a', check: (ck, str) => str >= 7 },
+  { id: 'streak14', name: 'Iron Will', desc: '14-day streak', symbol: '14', color: '#c47a3a', check: (ck, str) => str >= 14 },
+  { id: 'streak30', name: 'Monthly Master', desc: '30-day streak', symbol: '30', color: '#c45a5a', check: (ck, str) => str >= 30 },
+  { id: 'streak60', name: 'Habit Forged', desc: '60-day streak — habit is automatic', symbol: '60', color: '#9a5ac4', check: (ck, str) => str >= 60 },
+  { id: 'streak100', name: 'Century Club', desc: '100-day streak', symbol: '💯', color: '#d4a44a', check: (ck, str) => str >= 100 },
+  // Activity badges
+  { id: 'perfect', name: 'Perfect Day', desc: 'Complete all 11 habits in one day', symbol: '★', color: '#d4a44a', check: (ck) => Object.values(ck).some(d => d.length >= 11) },
+  { id: 'week5', name: 'Consistent', desc: '5+ habits every day for a week', symbol: '✓', color: '#6ab06a', check: (ck) => { for(let i=0;i<7;i++){const d=ck[getDateStr(i)]||[];if(d.length<5)return false;} return Object.keys(ck).length>=7; } },
+  { id: 'total100', name: 'Centurion', desc: '100 total habit completions', symbol: 'C', color: '#5a8ac4', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 100 },
+  { id: 'total500', name: 'Relentless', desc: '500 total habit completions', symbol: 'D', color: '#c47a3a', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 500 },
+  { id: 'total1000', name: 'Legendary', desc: '1000 total completions', symbol: 'L', color: '#d4a44a', check: (ck) => Object.values(ck).reduce((s,d)=>s+d.length,0) >= 1000 },
+  // Score badges (need tScore passed)
+  { id: 'score50', name: 'Awakening', desc: 'Hit a T-Score of 50+', symbol: '50', color: '#5a8ac4', check: (ck, str, ts) => ts >= 50 },
+  { id: 'score70', name: 'Dialed In', desc: 'Hit a T-Score of 70+', symbol: '70', color: '#6ab06a', check: (ck, str, ts) => ts >= 70 },
+  { id: 'score85', name: 'Optimized', desc: 'Hit a T-Score of 85+', symbol: '85', color: '#c47a3a', check: (ck, str, ts) => ts >= 85 },
+  { id: 'score95', name: 'Peak', desc: 'Hit a T-Score of 95+', symbol: '95', color: '#d4a44a', check: (ck, str, ts) => ts >= 95 },
+  { id: 'score100', name: 'Maximum', desc: 'Achieve a perfect 100 T-Score', symbol: '+', color: '#d4a44a', check: (ck, str, ts) => ts >= 100 },
 ];
 
-function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade }) {
+function BadgeIcon({ badge, earned, size = 44 }) {
+  const s = size;
+  return <div style={{
+    width: s, height: s, borderRadius: s * 0.25,
+    background: earned ? `${badge.color}18` : c.bgElevated,
+    border: `2px solid ${earned ? badge.color + '60' : c.border}`,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    position: 'relative', overflow: 'hidden',
+    boxShadow: earned ? `0 0 12px ${badge.color}20` : 'none',
+    transition: 'all 0.3s ease',
+  }}>
+    {earned && <div style={{ position:'absolute',inset:0,background:`radial-gradient(circle at 30% 30%, ${badge.color}15, transparent)` }} />}
+    <span style={{
+      fontSize: s * 0.4, fontWeight: 800, fontFamily: serif,
+      color: earned ? badge.color : c.textMuted + '60',
+      filter: earned ? 'none' : 'grayscale(1)',
+      letterSpacing: -1,
+    }}>{badge.symbol}</span>
+  </div>;
+}
+
+function BadgePopup({ badge, onClose }) {
+  const [show, setShow] = useState(false);
+  const [particles, setParticles] = useState([]);
+
+  useEffect(() => {
+    setTimeout(() => setShow(true), 50);
+    // Create particles
+    const p = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: 50 + (Math.random() - 0.5) * 60,
+      y: 40 + (Math.random() - 0.5) * 40,
+      size: 3 + Math.random() * 4,
+      delay: Math.random() * 0.5,
+      color: [c.accent, badge.color, '#fff', badge.color][Math.floor(Math.random() * 4)],
+    }));
+    setParticles(p);
+    const timer = setTimeout(onClose, 3500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return <div onClick={onClose} style={{
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 2000, padding: 20,
+    opacity: show ? 1 : 0, transition: 'opacity 0.3s ease',
+  }}>
+    {/* Particles */}
+    {particles.map(p => <div key={p.id} style={{
+      position: 'absolute', left: p.x + '%', top: p.y + '%',
+      width: p.size, height: p.size, borderRadius: '50%',
+      background: p.color, opacity: show ? 0 : 1,
+      transform: show ? `translate(${(Math.random()-0.5)*200}px, ${(Math.random()-0.5)*200}px) scale(0)` : 'translate(0,0) scale(1)',
+      transition: `all ${1 + p.delay}s ease-out ${p.delay}s`,
+    }} />)}
+
+    <div onClick={e => e.stopPropagation()} style={{
+      textAlign: 'center',
+      transform: show ? 'scale(1)' : 'scale(0.5)',
+      opacity: show ? 1 : 0,
+      transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+    }}>
+      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 3, color: c.accent, fontFamily: sans, fontWeight: 700, marginBottom: 16 }}>Badge Earned</div>
+      <div style={{ margin: '0 auto 16px', transform: show ? 'scale(1) rotate(0deg)' : 'scale(0) rotate(-180deg)', transition: 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s' }}>
+        <BadgeIcon badge={badge} earned={true} size={80} />
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: c.text, fontFamily: serif, marginBottom: 6 }}>{badge.name}</div>
+      <div style={{ fontSize: 13, color: c.textSec, fontFamily: sans }}>{badge.desc}</div>
+    </div>
+  </div>;
+}
+
+function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade, tScore }) {
   const last7 = Array.from({length:7},(_,i)=>{ const d=getDateStr(6-i); return { date:d, count:(checkins[d]||[]).length, mood:moodLog[d]?moodLog[d].value:null, sleep:sleepLog[d]?sleepLog[d].hours:null, day:new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'narrow'}) }; });
   const totalDays = Object.keys(checkins).length;
   const totalHabits = Object.values(checkins).reduce((s,d)=>s+d.length,0);
@@ -605,8 +685,9 @@ function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade }) {
   const level = getLevel(totalHabits);
   const nextLevel = getNextLevel(totalHabits);
   const progress = nextLevel ? ((totalHabits - level.minScore) / (nextLevel.minScore - level.minScore)) * 100 : 100;
-  const earnedBadges = BADGES.filter(b => b.check(checkins, streak));
-  const lockedBadges = BADGES.filter(b => !b.check(checkins, streak));
+  const ts = tScore?.total || 0;
+  const earnedBadges = BADGES.filter(b => b.check(checkins, streak, ts));
+  const lockedBadges = BADGES.filter(b => !b.check(checkins, streak, ts));
   const bestDay = Object.entries(checkins).reduce((best, [d, arr]) => arr.length > (best.count||0) ? { date: d, count: arr.length } : best, { count: 0 });
 
   return <div>
@@ -646,15 +727,14 @@ function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade }) {
     <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:14 }}>
       <h3 style={{ fontSize:14,fontWeight:600,marginBottom:4,color:c.text,fontFamily:sans }}>Badges</h3>
       <p style={{ fontSize:11,color:c.textMuted,marginBottom:14,fontFamily:sans }}>{earnedBadges.length} of {BADGES.length} earned</p>
-      <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8 }}>
-        {earnedBadges.map(b=><div key={b.id} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:10,borderRadius:10,background:c.accentGlow,border:`1px solid ${c.accent}30` }}>
-          <span style={{ fontSize:24 }}>{b.icon}</span>
-          <span style={{ fontSize:9,color:c.accent,fontFamily:sans,textAlign:'center',fontWeight:600,lineHeight:1.2 }}>{b.name}</span>
-        </div>)}
-        {lockedBadges.slice(0,Math.max(0,8-earnedBadges.length)).map(b=><div key={b.id} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:10,borderRadius:10,background:c.bgElevated,border:`1px solid ${c.border}`,opacity:0.4 }}>
-          <span style={{ fontSize:24,filter:'grayscale(1)' }}>{b.icon}</span>
-          <span style={{ fontSize:9,color:c.textMuted,fontFamily:sans,textAlign:'center',lineHeight:1.2 }}>{b.name}</span>
-        </div>)}
+      <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10 }}>
+        {BADGES.map(b => {
+          const earned = b.check(checkins, streak, ts);
+          return <div key={b.id} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:6,padding:'8px 4px' }}>
+            <BadgeIcon badge={b} earned={earned} size={44} />
+            <span style={{ fontSize:9,color:earned?c.text:c.textMuted+'80',fontFamily:sans,textAlign:'center',fontWeight:earned?600:400,lineHeight:1.2 }}>{b.name}</span>
+          </div>;
+        })}
       </div>
     </div>
 
@@ -1032,6 +1112,31 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
   const moodEmoji = mood ? MOOD_OPTIONS.find(m => m.value === mood.value)?.emoji : null;
   const scoreInfo = getScoreLabel(tScore.total);
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const cardRef = useRef(null);
+
+  const handleShare = async () => {
+    if (!cardRef.current) return;
+    try {
+      const html2canvas = (await import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm')).default;
+      const canvas = await html2canvas(cardRef.current, { backgroundColor: '#0f0d0a', scale: 2 });
+      canvas.toBlob(async (blob) => {
+        if (navigator.share && navigator.canShare) {
+          const file = new File([blob], 'andros-score.png', { type: 'image/png' });
+          try {
+            await navigator.share({ files: [file], title: 'My Andros T-Score', text: `I scored ${tScore.total}/100 on my testosterone optimization today. andros.bio` });
+            return;
+          } catch(e) {}
+        }
+        // Fallback: download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'andros-score.png'; a.click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    } catch(e) {
+      alert('Unable to capture scorecard. Try taking a screenshot instead.');
+    }
+  };
 
   if (!isPremium) {
     return <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20 }}>
@@ -1047,7 +1152,7 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
   }
 
   return <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16 }}>
-    <div onClick={e=>e.stopPropagation()} style={{ background:`linear-gradient(180deg, ${c.bgCard} 0%, ${c.bg} 100%)`,border:`1px solid ${c.border}`,borderRadius:24,padding:0,maxWidth:380,width:'100%',overflow:'hidden' }}>
+    <div onClick={e=>e.stopPropagation()} ref={cardRef} style={{ background:`linear-gradient(180deg, ${c.bgCard} 0%, ${c.bg} 100%)`,border:`1px solid ${c.border}`,borderRadius:24,padding:0,maxWidth:380,width:'100%',overflow:'hidden' }}>
 
       {/* Header */}
       <div style={{ padding:'28px 28px 0',textAlign:'center' }}>
@@ -1128,6 +1233,13 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
         </div>
       </div>
 
+      {/* Share & Download */}
+      <div style={{ padding:'0 24px 20px',display:'flex',gap:10 }}>
+        <button onClick={handleShare} style={{ flex:1,padding:'12px 16px',borderRadius:10,border:'none',background:c.accent,color:c.bg,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:sans,display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
+          Share Scorecard
+        </button>
+      </div>
+
       {/* Footer branding */}
       <div style={{ borderTop:`1px solid ${c.border}`,padding:'14px 24px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
         <Logo size="small" />
@@ -1190,6 +1302,8 @@ export default function App() {
   const [checkins,setCheckins]=useState({});const [moodLog,setMoodLog]=useState({});const [sleepLog,setSleepLog]=useState({});
   const [scienceHabit,setScienceHabit]=useState(null);const [showPremium,setShowPremium]=useState(false);const [selectedProtocol,setSelectedProtocol]=useState(null);
   const [loading,setLoading]=useState(true);const [checkoutMessage,setCheckoutMessage]=useState('');const [showScorecard,setShowScorecard]=useState(false);
+  const [badgePopup, setBadgePopup] = useState(null);
+  const prevBadgesRef = useRef(null);
 
   // Restore session on mount
   useEffect(() => { (async()=>{ try { const u = await DataLayer.restoreSession(); if(u) { setUser(u); const [ch,mo,sl,pr] = await Promise.all([DataLayer.getCheckins(u.id),DataLayer.getMoodLogs(u.id),DataLayer.getSleepLogs(u.id),DataLayer.getPremiumStatus(u.id)]); setCheckins(ch);setMoodLog(mo);setSleepLog(sl);setIsPremium(pr); } } catch(e){} setLoading(false); })(); }, []);
@@ -1249,6 +1363,20 @@ export default function App() {
   const todayStr=getToday();const todayCheckins=checkins[todayStr]||[];const streak=calculateStreak(checkins);const totalScore=calculateTotalScore(checkins);const level=getLevel(totalScore);const nextLevel=getNextLevel(totalScore);const streakMaintained=todayCheckins.length>=STREAK_THRESHOLD;
   const tScore = calculateTScore(checkins, sleepLog);
 
+  // Detect newly earned badges
+  useEffect(() => {
+    const ts = tScore?.total || 0;
+    const currentEarned = BADGES.filter(b => b.check(checkins, streak, ts)).map(b => b.id);
+    if (prevBadgesRef.current !== null) {
+      const newBadges = currentEarned.filter(id => !prevBadgesRef.current.includes(id));
+      if (newBadges.length > 0) {
+        const badge = BADGES.find(b => b.id === newBadges[0]);
+        if (badge) setBadgePopup(badge);
+      }
+    }
+    prevBadgesRef.current = currentEarned;
+  }, [checkins, streak, tScore?.total]);
+
   return <div style={{ minHeight:'100vh',background:c.bg,color:c.text,fontFamily:sans }}>
     <header style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:`1px solid ${c.border}`,background:'rgba(15,13,10,0.95)',position:'sticky',top:0,zIndex:100 }}>
       <Logo size="small" />
@@ -1273,7 +1401,7 @@ export default function App() {
         <button onClick={()=>setShowScorecard(true)} style={{ width:'100%',marginTop:24,padding:16,borderRadius:12,border:'none',cursor:'pointer',background:`linear-gradient(135deg,${c.accent},${c.accentDim})`,color:c.bg,fontSize:16,fontWeight:700,fontFamily:sans,letterSpacing:0.5,boxShadow:'0 4px 20px rgba(212,164,74,0.25)' }}>Get My Score</button>
       </div>}
       {tab==='protocols'&&(selectedProtocol?<ProtocolDetail protocol={selectedProtocol} onBack={()=>setSelectedProtocol(null)} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />:<ProtocolsView isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onSelect={setSelectedProtocol} />)}
-      {tab==='stats'&&<StatsView checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />}
+      {tab==='stats'&&<StatsView checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} tScore={tScore} />}
       {tab==='profile'&&<ProfileView user={user} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onLogout={handleLogout} onUpdateUser={setUser} />}
     </main>
     <nav style={{ position:'fixed',bottom:0,left:0,right:0,display:'flex',justifyContent:'space-around',background:'rgba(15,13,10,0.97)',borderTop:`1px solid ${c.border}`,padding:'14px 0 18px',zIndex:100 }}>
@@ -1282,5 +1410,6 @@ export default function App() {
     {scienceHabit&&<ScienceModal habit={scienceHabit} onClose={()=>setScienceHabit(null)} />}
     {showPremium&&<PremiumModal onClose={()=>setShowPremium(false)} onUpgrade={handleUpgrade} user={user} />}
     {showScorecard&&<Scorecard tScore={tScore} streak={streak} moodLog={moodLog} sleepLog={sleepLog} todayCheckins={todayCheckins} onClose={()=>setShowScorecard(false)} isPremium={isPremium} onUpgrade={()=>{setShowScorecard(false);setShowPremium(true);}} />}
+    {badgePopup&&<BadgePopup badge={badgePopup} onClose={()=>setBadgePopup(null)} />}
   </div>;
 }
