@@ -337,6 +337,100 @@ const MOOD_OPTIONS = [
 ];
 const CATEGORIES = [...new Set(DEFAULT_HABITS.map(h => h.category))];
 
+// ============================================================
+// TESTOSTERONE SCORE ENGINE
+// ============================================================
+const SCORE_CATEGORIES = {
+  sleep: { habits: ['sleep', 'no-alcohol'], maxPoints: 30, label: 'Sleep & Recovery', icon: '🌙', type: 'streak' },
+  training: { habits: ['resistance', 'walk'], maxPoints: 25, label: 'Training', icon: '🏋️', type: 'rolling7' },
+  nutrition: { habits: ['zinc', 'healthy-fats', 'no-seed-oils', 'vitamin-d'], maxPoints: 25, label: 'Nutrition', icon: '🥑', type: 'rolling3' },
+  lifestyle: { habits: ['sunlight', 'mindfulness', 'cold'], maxPoints: 20, label: 'Lifestyle', icon: '⚡', type: 'rolling7' },
+};
+
+function calculateTScore(checkins, sleepLog) {
+  const today = getToday();
+  const todayHabits = checkins[today] || [];
+
+  // --- Sleep component (30 pts) - streak based, hard reset ---
+  let sleepStreak = 0;
+  for (let i = 0; i < 365; i++) {
+    const d = getDateStr(i);
+    const dayHabits = checkins[d] || [];
+    const hasSleep = SCORE_CATEGORIES.sleep.habits.some(h => dayHabits.includes(h));
+    if (hasSleep) sleepStreak++;
+    else if (i === 0) continue; // today might not be logged yet
+    else break;
+  }
+  const sleepMult = 1 - Math.exp(-sleepStreak / 4);
+  const todaySleepHabits = SCORE_CATEGORIES.sleep.habits.filter(h => todayHabits.includes(h));
+  const todaySleepRatio = todaySleepHabits.length / SCORE_CATEGORIES.sleep.habits.length;
+  const sleepScore = SCORE_CATEGORIES.sleep.maxPoints * todaySleepRatio * (0.5 + 0.5 * sleepMult);
+
+  // --- Training component (25 pts) - rolling 7-day ---
+  let trainingDays = 0;
+  const daysToCheck = Math.min(7, Object.keys(checkins).length || 1);
+  for (let i = 0; i < daysToCheck; i++) {
+    const d = getDateStr(i);
+    const dayHabits = checkins[d] || [];
+    if (SCORE_CATEGORIES.training.habits.some(h => dayHabits.includes(h))) trainingDays++;
+  }
+  const trainingMult = Math.min(trainingDays / 3, 1);
+  const trainingScore = SCORE_CATEGORIES.training.maxPoints * trainingMult;
+
+  // --- Nutrition component (25 pts) - rolling 3-day avg ---
+  let nutritionTotal = 0;
+  const nutriDays = Math.min(3, Object.keys(checkins).length || 1);
+  for (let i = 0; i < nutriDays; i++) {
+    const d = getDateStr(i);
+    const dayHabits = checkins[d] || [];
+    const hit = SCORE_CATEGORIES.nutrition.habits.filter(h => dayHabits.includes(h)).length;
+    nutritionTotal += hit / SCORE_CATEGORIES.nutrition.habits.length;
+  }
+  const nutritionMult = nutritionTotal / nutriDays;
+  const nutritionScore = SCORE_CATEGORIES.nutrition.maxPoints * nutritionMult;
+
+  // --- Lifestyle component (20 pts) - rolling 7-day avg ---
+  let lifestyleTotal = 0;
+  const lifeDays = Math.min(7, Object.keys(checkins).length || 1);
+  for (let i = 0; i < lifeDays; i++) {
+    const d = getDateStr(i);
+    const dayHabits = checkins[d] || [];
+    const hit = SCORE_CATEGORIES.lifestyle.habits.filter(h => dayHabits.includes(h)).length;
+    lifestyleTotal += hit / SCORE_CATEGORIES.lifestyle.habits.length;
+  }
+  const lifestyleMult = lifestyleTotal / lifeDays;
+  const lifestyleScore = SCORE_CATEGORIES.lifestyle.maxPoints * lifestyleMult;
+
+  // --- Consistency bonus (30 days to max) ---
+  const overallStreak = calculateStreak(checkins);
+  const consistencyMult = 1 - Math.exp(-overallStreak / 8);
+
+  // --- Final score ---
+  const rawScore = sleepScore + trainingScore + nutritionScore + lifestyleScore;
+  const finalScore = Math.round(rawScore * (0.8 + 0.2 * consistencyMult));
+
+  return {
+    total: Math.min(finalScore, 100),
+    breakdown: {
+      sleep: { score: Math.round(sleepScore), max: 30, streak: sleepStreak, mult: sleepMult },
+      training: { score: Math.round(trainingScore), max: 25, days: trainingDays, mult: trainingMult },
+      nutrition: { score: Math.round(nutritionScore), max: 25, mult: nutritionMult },
+      lifestyle: { score: Math.round(lifestyleScore), max: 20, mult: lifestyleMult },
+    },
+    consistency: { streak: overallStreak, mult: consistencyMult },
+    rawScore: Math.round(rawScore),
+  };
+}
+
+function getScoreLabel(score) {
+  if (score >= 95) return { label: 'Optimal', color: '#d4a44a' };
+  if (score >= 85) return { label: 'Excellent', color: '#6ab06a' };
+  if (score >= 70) return { label: 'Good', color: '#6ab06a' };
+  if (score >= 50) return { label: 'Moderate', color: '#d4a44a' };
+  if (score >= 30) return { label: 'Low', color: '#c47a3a' };
+  return { label: 'Critical', color: '#c45a5a' };
+}
+
 const PROTOCOLS = [
   { id: 'beginner', title: 'The Foundation Protocol', subtitle: '30 days to build your base', tier: 'free', level: 'Beginner', duration: '30 days', icon: '🌱', overview: 'Designed for men just starting their optimization journey. No extreme measures — just the foundational habits that make the biggest impact.', sections: [
     { title: 'Week 1-2: Sleep & Sunlight', content: 'Fix your sleep first. This alone can raise T levels 10-15%.', habits: ['15 min sunlight within 1 hour of waking', 'Consistent bedtime alarm', 'No caffeine after 2pm', 'No screens 60 min before bed'], scienceNote: 'Men who slept 5 hours had 10-15% lower T than when sleeping 8 hours (U of Chicago).' },
@@ -931,6 +1025,118 @@ function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
   </div>;
 }
 
+function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, isPremium, onUpgrade }) {
+  const today = getToday();
+  const mood = moodLog[today];
+  const sleep = sleepLog[today];
+  const moodEmoji = mood ? MOOD_OPTIONS.find(m => m.value === mood.value)?.emoji : null;
+  const scoreInfo = getScoreLabel(tScore.total);
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  if (!isPremium) {
+    return <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20 }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:20,padding:32,maxWidth:380,width:'100%',textAlign:'center' }}>
+        <div style={{ fontSize:48,marginBottom:16 }}>🔒</div>
+        <h3 style={{ fontSize:20,fontWeight:700,color:c.text,fontFamily:serif,marginBottom:8 }}>Testosterone Score</h3>
+        <p style={{ fontSize:14,color:c.textSec,lineHeight:1.6,marginBottom:24,fontFamily:sans }}>Your daily T-Score is calculated from your habits, sleep streak, training consistency, and nutrition patterns — weighted by scientific impact on testosterone production.</p>
+        <button onClick={(e)=>{e.stopPropagation();onUpgrade();}} style={{ width:'100%',padding:14,borderRadius:10,border:'none',background:c.accent,color:c.bg,fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:sans }}>Unlock Premium — $8.99/mo</button>
+        <p style={{ fontSize:11,color:c.textMuted,marginTop:10,fontFamily:sans }}>7-day free trial</p>
+        <button onClick={onClose} style={{ background:'none',border:'none',color:c.textMuted,cursor:'pointer',fontSize:13,marginTop:16,fontFamily:sans }}>Maybe later</button>
+      </div>
+    </div>;
+  }
+
+  return <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16 }}>
+    <div onClick={e=>e.stopPropagation()} style={{ background:`linear-gradient(180deg, ${c.bgCard} 0%, ${c.bg} 100%)`,border:`1px solid ${c.border}`,borderRadius:24,padding:0,maxWidth:380,width:'100%',overflow:'hidden' }}>
+
+      {/* Header */}
+      <div style={{ padding:'28px 28px 0',textAlign:'center' }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20 }}>
+          <Logo size="small" />
+          <button onClick={onClose} style={{ background:'none',border:'none',color:c.textMuted,cursor:'pointer',fontSize:16 }}>✕</button>
+        </div>
+        <div style={{ fontSize:11,color:c.textMuted,textTransform:'uppercase',letterSpacing:2,fontFamily:sans,marginBottom:4 }}>{dateStr}</div>
+        <div style={{ fontSize:10,color:c.textMuted,letterSpacing:1.5,fontFamily:sans,marginBottom:20 }}>DAILY TESTOSTERONE SCORE</div>
+      </div>
+
+      {/* Big Score */}
+      <div style={{ textAlign:'center',padding:'0 28px 24px' }}>
+        <div style={{ position:'relative',width:160,height:160,margin:'0 auto' }}>
+          <svg width="160" height="160" viewBox="0 0 160 160" style={{ transform:'rotate(-90deg)' }}>
+            <circle cx="80" cy="80" r="70" fill="none" stroke={c.bgElevated} strokeWidth="8" />
+            <circle cx="80" cy="80" r="70" fill="none" stroke={scoreInfo.color} strokeWidth="8"
+              strokeDasharray={`${2 * Math.PI * 70 * tScore.total / 100} ${2 * Math.PI * 70}`}
+              strokeLinecap="round" style={{ transition:'stroke-dasharray 1s ease' }} />
+          </svg>
+          <div style={{ position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center' }}>
+            <div style={{ fontSize:52,fontWeight:700,fontFamily:serif,color:c.text,lineHeight:1 }}>{tScore.total}</div>
+            <div style={{ fontSize:12,fontWeight:600,color:scoreInfo.color,fontFamily:sans,marginTop:4 }}>{scoreInfo.label}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Breakdown */}
+      <div style={{ padding:'0 24px 20px' }}>
+        {Object.entries(SCORE_CATEGORIES).map(([key, cat]) => {
+          const data = tScore.breakdown[key];
+          const pct = (data.score / data.max) * 100;
+          return <div key={key} style={{ marginBottom:12 }}>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5 }}>
+              <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+                <span style={{ fontSize:14 }}>{cat.icon}</span>
+                <span style={{ fontSize:12,fontWeight:600,color:c.text,fontFamily:sans }}>{cat.label}</span>
+              </div>
+              <span style={{ fontSize:12,fontFamily:'monospace',color:c.textSec }}>{data.score}/{data.max}</span>
+            </div>
+            <div style={{ height:5,background:c.bgElevated,borderRadius:3,overflow:'hidden' }}>
+              <div style={{ height:'100%',borderRadius:3,width:pct+'%',background:pct>=80?c.accent:pct>=50?c.warning:'#c47a3a',transition:'width 0.6s ease' }} />
+            </div>
+            {key==='sleep'&&data.streak>0&&<div style={{ fontSize:10,color:c.textMuted,marginTop:3,fontFamily:sans }}>{data.streak} day sleep streak</div>}
+            {key==='training'&&<div style={{ fontSize:10,color:c.textMuted,marginTop:3,fontFamily:sans }}>{data.days} training day{data.days!==1?'s':''} this week</div>}
+          </div>;
+        })}
+      </div>
+
+      {/* Today's Inputs */}
+      <div style={{ padding:'0 24px 20px',display:'flex',gap:10 }}>
+        <div style={{ flex:1,background:c.bgElevated,borderRadius:10,padding:'12px 14px',textAlign:'center' }}>
+          <div style={{ fontSize:11,color:c.textMuted,fontFamily:sans,marginBottom:4 }}>Habits</div>
+          <div style={{ fontSize:20,fontWeight:700,fontFamily:serif,color:c.text }}>{todayCheckins.length}<span style={{ fontSize:12,fontWeight:400,color:c.textMuted }}>/{DEFAULT_HABITS.length}</span></div>
+        </div>
+        <div style={{ flex:1,background:c.bgElevated,borderRadius:10,padding:'12px 14px',textAlign:'center' }}>
+          <div style={{ fontSize:11,color:c.textMuted,fontFamily:sans,marginBottom:4 }}>Mood</div>
+          <div style={{ fontSize:20 }}>{moodEmoji || '—'}</div>
+        </div>
+        <div style={{ flex:1,background:c.bgElevated,borderRadius:10,padding:'12px 14px',textAlign:'center' }}>
+          <div style={{ fontSize:11,color:c.textMuted,fontFamily:sans,marginBottom:4 }}>Sleep</div>
+          <div style={{ fontSize:20,fontWeight:700,fontFamily:serif,color:c.text }}>{sleep?sleep.hours+'h':'—'}</div>
+        </div>
+        <div style={{ flex:1,background:c.bgElevated,borderRadius:10,padding:'12px 14px',textAlign:'center' }}>
+          <div style={{ fontSize:11,color:c.textMuted,fontFamily:sans,marginBottom:4 }}>Streak</div>
+          <div style={{ fontSize:20,fontWeight:700,fontFamily:serif,color:c.text }}>{tScore.consistency.streak}<span style={{ fontSize:12 }}>🔥</span></div>
+        </div>
+      </div>
+
+      {/* Consistency bonus */}
+      <div style={{ padding:'0 24px 24px' }}>
+        <div style={{ background:c.bgElevated,borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+          <div>
+            <div style={{ fontSize:12,fontWeight:600,color:c.text,fontFamily:sans }}>Consistency Bonus</div>
+            <div style={{ fontSize:10,color:c.textMuted,fontFamily:sans,marginTop:2 }}>{tScore.consistency.streak>=30?'Maximum bonus reached':'Maintain streak to increase bonus'}</div>
+          </div>
+          <div style={{ fontSize:14,fontWeight:700,color:c.accent,fontFamily:'monospace' }}>+{Math.round(tScore.consistency.mult * 20)}%</div>
+        </div>
+      </div>
+
+      {/* Footer branding */}
+      <div style={{ borderTop:`1px solid ${c.border}`,padding:'14px 24px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+        <Logo size="small" />
+        <span style={{ fontSize:10,color:c.textMuted,fontFamily:sans }}>andros.bio</span>
+      </div>
+    </div>
+  </div>;
+}
+
 function AuthScreen({ onLogin }) {
   const [mode,setMode]=useState('welcome');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [name,setName]=useState('');const [error,setError]=useState('');const [loading,setLoading]=useState(false);
   const inp = { width:'100%',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:8,padding:'14px 16px',fontSize:15,color:c.text,outline:'none',boxSizing:'border-box',fontFamily:sans };
@@ -983,7 +1189,7 @@ export default function App() {
   const [user,setUser]=useState(null);const [isPremium,setIsPremium]=useState(false);const [tab,setTab]=useState('today');
   const [checkins,setCheckins]=useState({});const [moodLog,setMoodLog]=useState({});const [sleepLog,setSleepLog]=useState({});
   const [scienceHabit,setScienceHabit]=useState(null);const [showPremium,setShowPremium]=useState(false);const [selectedProtocol,setSelectedProtocol]=useState(null);
-  const [loading,setLoading]=useState(true);const [checkoutMessage,setCheckoutMessage]=useState('');
+  const [loading,setLoading]=useState(true);const [checkoutMessage,setCheckoutMessage]=useState('');const [showScorecard,setShowScorecard]=useState(false);
 
   // Restore session on mount
   useEffect(() => { (async()=>{ try { const u = await DataLayer.restoreSession(); if(u) { setUser(u); const [ch,mo,sl,pr] = await Promise.all([DataLayer.getCheckins(u.id),DataLayer.getMoodLogs(u.id),DataLayer.getSleepLogs(u.id),DataLayer.getPremiumStatus(u.id)]); setCheckins(ch);setMoodLog(mo);setSleepLog(sl);setIsPremium(pr); } } catch(e){} setLoading(false); })(); }, []);
@@ -1041,6 +1247,7 @@ export default function App() {
   if (!user) return <AuthScreen onLogin={handleLogin} />;
 
   const todayStr=getToday();const todayCheckins=checkins[todayStr]||[];const streak=calculateStreak(checkins);const totalScore=calculateTotalScore(checkins);const level=getLevel(totalScore);const nextLevel=getNextLevel(totalScore);const streakMaintained=todayCheckins.length>=STREAK_THRESHOLD;
+  const tScore = calculateTScore(checkins, sleepLog);
 
   return <div style={{ minHeight:'100vh',background:c.bg,color:c.text,fontFamily:sans }}>
     <header style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:`1px solid ${c.border}`,background:'rgba(15,13,10,0.95)',position:'sticky',top:0,zIndex:100 }}>
@@ -1063,6 +1270,7 @@ export default function App() {
         {CATEGORIES.map(cat=><div key={cat} style={{ marginBottom:18 }}><h3 style={{ fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:2,color:c.textMuted,marginBottom:8,paddingLeft:2 }}>{cat}</h3>{DEFAULT_HABITS.filter(h=>h.category===cat).map(habit=><HabitCard key={habit.id} habit={habit} checked={todayCheckins.includes(habit.id)} onToggle={toggleHabit} onShowScience={setScienceHabit} />)}</div>)}
         <div style={{ marginTop:22 }}><MoodTracker moodLog={moodLog} onLogMood={logMood} /></div>
         <div style={{ marginTop:12 }}><SleepTracker sleepLog={sleepLog} onLogSleep={logSleep} /></div>
+        <button onClick={()=>setShowScorecard(true)} style={{ width:'100%',marginTop:24,padding:16,borderRadius:12,border:'none',cursor:'pointer',background:`linear-gradient(135deg,${c.accent},${c.accentDim})`,color:c.bg,fontSize:16,fontWeight:700,fontFamily:sans,letterSpacing:0.5,boxShadow:'0 4px 20px rgba(212,164,74,0.25)' }}>Get My Score</button>
       </div>}
       {tab==='protocols'&&(selectedProtocol?<ProtocolDetail protocol={selectedProtocol} onBack={()=>setSelectedProtocol(null)} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />:<ProtocolsView isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onSelect={setSelectedProtocol} />)}
       {tab==='stats'&&<StatsView checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />}
@@ -1073,5 +1281,6 @@ export default function App() {
     </nav>
     {scienceHabit&&<ScienceModal habit={scienceHabit} onClose={()=>setScienceHabit(null)} />}
     {showPremium&&<PremiumModal onClose={()=>setShowPremium(false)} onUpgrade={handleUpgrade} user={user} />}
+    {showScorecard&&<Scorecard tScore={tScore} streak={streak} moodLog={moodLog} sleepLog={sleepLog} todayCheckins={todayCheckins} onClose={()=>setShowScorecard(false)} isPremium={isPremium} onUpgrade={()=>{setShowScorecard(false);setShowPremium(true);}} />}
   </div>;
 }
