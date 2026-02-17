@@ -1343,8 +1343,25 @@ export default function App() {
   const toggleHabit = async (habitId) => {
     const todayStr = getToday(); const dc = checkins[todayStr]||[]; const checked = dc.includes(habitId);
     const updated = checked ? dc.filter(id=>id!==habitId) : [...dc,habitId];
-    setCheckins(prev=>({...prev,[todayStr]:updated}));
+    const newCheckins = {...checkins,[todayStr]:updated};
+    
+    // Check for new badges before updating state
+    const oldStreak = calculateStreak(checkins);
+    const oldTs = calculateTScore(checkins, sleepLog)?.total || 0;
+    const oldEarned = BADGES.filter(b => b.check(checkins, oldStreak, oldTs)).map(b => b.id);
+    
+    setCheckins(newCheckins);
     await DataLayer.toggleCheckin(user.id,habitId,todayStr,checked);
+    
+    // Check after update
+    const newStreak = calculateStreak(newCheckins);
+    const newTs = calculateTScore(newCheckins, sleepLog)?.total || 0;
+    const newEarned = BADGES.filter(b => b.check(newCheckins, newStreak, newTs)).map(b => b.id);
+    const fresh = newEarned.filter(id => !oldEarned.includes(id));
+    if (fresh.length > 0) {
+      const badge = BADGES.find(b => b.id === fresh[0]);
+      if (badge) setTimeout(() => setBadgePopup(badge), 300);
+    }
   };
 
   const logMood = async (value, symptoms = [], note = '') => {
@@ -1369,23 +1386,6 @@ export default function App() {
 
   const todayStr=getToday();const todayCheckins=checkins[todayStr]||[];const streak=calculateStreak(checkins);const totalScore=calculateTotalScore(checkins);const level=getLevel(totalScore);const nextLevel=getNextLevel(totalScore);const streakMaintained=todayCheckins.length>=STREAK_THRESHOLD;
   const tScore = calculateTScore(checkins, sleepLog);
-
-  // Track badge count for popup - using ref to avoid re-render loops
-  const tScoreTotal = tScore?.total || 0;
-  const earnedNow = BADGES.filter(b => b.check(checkins, streak, tScoreTotal));
-  const earnedCountRef = useRef(-1);
-  
-  if (earnedCountRef.current === -1) {
-    // First load — just set the count, don't popup
-    earnedCountRef.current = earnedNow.length;
-  } else if (earnedNow.length > earnedCountRef.current && !badgePopup) {
-    // New badge earned — show popup (only if not already showing one)
-    const newBadge = earnedNow[earnedNow.length - 1];
-    earnedCountRef.current = earnedNow.length;
-    setTimeout(() => setBadgePopup(newBadge), 100);
-  } else if (earnedNow.length !== earnedCountRef.current) {
-    earnedCountRef.current = earnedNow.length;
-  }
 
   return <div style={{ minHeight:'100vh',background:c.bg,color:c.text,fontFamily:sans }}>
     <header style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:`1px solid ${c.border}`,background:'rgba(15,13,10,0.95)',position:'sticky',top:0,zIndex:100 }}>
