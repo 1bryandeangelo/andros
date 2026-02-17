@@ -351,20 +351,21 @@ function calculateTScore(checkins, sleepLog) {
   const today = getToday();
   const todayHabits = checkins[today] || [];
 
-  // --- Sleep component (30 pts) - streak based, hard reset ---
+  // --- Sleep component (30 pts) - today's habits are primary, streak is bonus ---
   let sleepStreak = 0;
   for (let i = 0; i < 365; i++) {
     const d = getDateStr(i);
     const dayHabits = checkins[d] || [];
     const hasSleep = SCORE_CATEGORIES.sleep.habits.some(h => dayHabits.includes(h));
     if (hasSleep) sleepStreak++;
-    else if (i === 0) continue; // today might not be logged yet
+    else if (i === 0) continue;
     else break;
   }
-  const sleepMult = 1 - Math.exp(-sleepStreak / 4);
+  const sleepStreakBonus = 1 - Math.exp(-sleepStreak / 4);
   const todaySleepHabits = SCORE_CATEGORIES.sleep.habits.filter(h => todayHabits.includes(h));
   const todaySleepRatio = todaySleepHabits.length / SCORE_CATEGORIES.sleep.habits.length;
-  const sleepScore = SCORE_CATEGORIES.sleep.maxPoints * todaySleepRatio * (0.5 + 0.5 * sleepMult);
+  // 80% from today's habits, 20% bonus from streak
+  const sleepScore = SCORE_CATEGORIES.sleep.maxPoints * todaySleepRatio * (0.8 + 0.2 * sleepStreakBonus);
 
   // --- Training component (25 pts) - rolling 7-day ---
   let trainingDays = 0;
@@ -401,18 +402,18 @@ function calculateTScore(checkins, sleepLog) {
   const lifestyleMult = lifestyleTotal / lifeDays;
   const lifestyleScore = SCORE_CATEGORIES.lifestyle.maxPoints * lifestyleMult;
 
-  // --- Consistency bonus (30 days to max) ---
+  // --- Consistency bonus (30 days to max, but only 10% of total) ---
   const overallStreak = calculateStreak(checkins);
   const consistencyMult = 1 - Math.exp(-overallStreak / 8);
 
-  // --- Final score ---
+  // --- Final score: 90% from categories, 10% from consistency ---
   const rawScore = sleepScore + trainingScore + nutritionScore + lifestyleScore;
-  const finalScore = Math.round(rawScore * (0.8 + 0.2 * consistencyMult));
+  const finalScore = Math.round(rawScore * (0.9 + 0.1 * consistencyMult));
 
   return {
     total: Math.min(finalScore, 100),
     breakdown: {
-      sleep: { score: Math.round(sleepScore), max: 30, streak: sleepStreak, mult: sleepMult },
+      sleep: { score: Math.round(sleepScore), max: 30, streak: sleepStreak, mult: sleepStreakBonus },
       training: { score: Math.round(trainingScore), max: 25, days: trainingDays, mult: trainingMult },
       nutrition: { score: Math.round(nutritionScore), max: 25, mult: nutritionMult },
       lifestyle: { score: Math.round(lifestyleScore), max: 20, mult: lifestyleMult },
@@ -1113,9 +1114,10 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
   const scoreInfo = getScoreLabel(tScore.total);
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const cardRef = useRef(null);
+  const shareRef = useRef(null);
 
   const handleShare = async () => {
-    if (!cardRef.current) return;
+    if (!shareRef.current) return;
     try {
       // Load html2canvas if not already loaded
       if (!window.html2canvas) {
@@ -1126,7 +1128,7 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
           document.head.appendChild(s);
         });
       }
-      const canvas = await window.html2canvas(cardRef.current, { backgroundColor: '#0f0d0a', scale: 2 });
+      const canvas = await window.html2canvas(shareRef.current, { backgroundColor: '#0f0d0a', scale: 2, useCORS: true });
       canvas.toBlob(async (blob) => {
         if (navigator.share && navigator.canShare) {
           const file = new File([blob], 'andros-score.png', { type: 'image/png' });
@@ -1160,13 +1162,20 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
   }
 
   return <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16 }}>
-    <div onClick={e=>e.stopPropagation()} ref={cardRef} style={{ background:`linear-gradient(180deg, ${c.bgCard} 0%, ${c.bg} 100%)`,border:`1px solid ${c.border}`,borderRadius:24,padding:0,maxWidth:380,width:'100%',overflow:'hidden' }}>
+    <div onClick={e=>e.stopPropagation()} style={{ background:c.bg,borderRadius:24,padding:0,maxWidth:380,width:'100%',overflow:'hidden',border:`1px solid ${c.border}` }}>
+
+      {/* Close button - outside share capture */}
+      <div style={{ display:'flex',justifyContent:'flex-end',padding:'12px 16px 0' }}>
+        <button onClick={onClose} style={{ background:'none',border:'none',color:c.textMuted,cursor:'pointer',fontSize:16 }}>✕</button>
+      </div>
+
+      {/* Shareable content starts here */}
+      <div ref={shareRef} style={{ background:c.bg }}>
 
       {/* Header */}
-      <div style={{ padding:'28px 28px 0',textAlign:'center' }}>
-        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20 }}>
+      <div style={{ padding:'8px 28px 0',textAlign:'center' }}>
+        <div style={{ display:'flex',justifyContent:'center',alignItems:'center',marginBottom:16 }}>
           <Logo size="small" />
-          <button onClick={onClose} style={{ background:'none',border:'none',color:c.textMuted,cursor:'pointer',fontSize:16 }}>✕</button>
         </div>
         <div style={{ fontSize:11,color:c.textMuted,textTransform:'uppercase',letterSpacing:2,fontFamily:sans,marginBottom:4 }}>{dateStr}</div>
         <div style={{ fontSize:10,color:c.textMuted,letterSpacing:1.5,fontFamily:sans,marginBottom:20 }}>DAILY TESTOSTERONE SCORE</div>
@@ -1241,17 +1250,19 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
         </div>
       </div>
 
-      {/* Share & Download */}
-      <div style={{ padding:'0 24px 20px',display:'flex',gap:10 }}>
-        <button onClick={handleShare} style={{ flex:1,padding:'12px 16px',borderRadius:10,border:'none',background:c.accent,color:c.bg,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:sans,display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
-          Share Scorecard
-        </button>
-      </div>
-
       {/* Footer branding */}
       <div style={{ borderTop:`1px solid ${c.border}`,padding:'14px 24px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
         <Logo size="small" />
         <span style={{ fontSize:10,color:c.textMuted,fontFamily:sans }}>andros.bio</span>
+      </div>
+
+      </div>{/* End shareable content */}
+
+      {/* Share button - outside share capture */}
+      <div style={{ padding:'0 24px 20px' }}>
+        <button onClick={handleShare} style={{ width:'100%',padding:'12px 16px',borderRadius:10,border:'none',background:c.accent,color:c.bg,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:sans }}>
+          Share Scorecard
+        </button>
       </div>
     </div>
   </div>;
