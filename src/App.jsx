@@ -1117,8 +1117,16 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
   const handleShare = async () => {
     if (!cardRef.current) return;
     try {
-      const html2canvas = (await import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm')).default;
-      const canvas = await html2canvas(cardRef.current, { backgroundColor: '#0f0d0a', scale: 2 });
+      // Load html2canvas if not already loaded
+      if (!window.html2canvas) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+      const canvas = await window.html2canvas(cardRef.current, { backgroundColor: '#0f0d0a', scale: 2 });
       canvas.toBlob(async (blob) => {
         if (navigator.share && navigator.canShare) {
           const file = new File([blob], 'andros-score.png', { type: 'image/png' });
@@ -1303,7 +1311,6 @@ export default function App() {
   const [scienceHabit,setScienceHabit]=useState(null);const [showPremium,setShowPremium]=useState(false);const [selectedProtocol,setSelectedProtocol]=useState(null);
   const [loading,setLoading]=useState(true);const [checkoutMessage,setCheckoutMessage]=useState('');const [showScorecard,setShowScorecard]=useState(false);
   const [badgePopup, setBadgePopup] = useState(null);
-  const prevBadgesRef = useRef(null);
 
   // Restore session on mount
   useEffect(() => { (async()=>{ try { const u = await DataLayer.restoreSession(); if(u) { setUser(u); const [ch,mo,sl,pr] = await Promise.all([DataLayer.getCheckins(u.id),DataLayer.getMoodLogs(u.id),DataLayer.getSleepLogs(u.id),DataLayer.getPremiumStatus(u.id)]); setCheckins(ch);setMoodLog(mo);setSleepLog(sl);setIsPremium(pr); } } catch(e){} setLoading(false); })(); }, []);
@@ -1363,19 +1370,22 @@ export default function App() {
   const todayStr=getToday();const todayCheckins=checkins[todayStr]||[];const streak=calculateStreak(checkins);const totalScore=calculateTotalScore(checkins);const level=getLevel(totalScore);const nextLevel=getNextLevel(totalScore);const streakMaintained=todayCheckins.length>=STREAK_THRESHOLD;
   const tScore = calculateTScore(checkins, sleepLog);
 
-  // Detect newly earned badges
-  useEffect(() => {
-    const ts = tScore?.total || 0;
-    const currentEarned = BADGES.filter(b => b.check(checkins, streak, ts)).map(b => b.id);
-    if (prevBadgesRef.current !== null) {
-      const newBadges = currentEarned.filter(id => !prevBadgesRef.current.includes(id));
-      if (newBadges.length > 0) {
-        const badge = BADGES.find(b => b.id === newBadges[0]);
-        if (badge) setBadgePopup(badge);
-      }
-    }
-    prevBadgesRef.current = currentEarned;
-  }, [checkins, streak, tScore?.total]);
+  // Track badge count for popup - using ref to avoid re-render loops
+  const tScoreTotal = tScore?.total || 0;
+  const earnedNow = BADGES.filter(b => b.check(checkins, streak, tScoreTotal));
+  const earnedCountRef = useRef(-1);
+  
+  if (earnedCountRef.current === -1) {
+    // First load — just set the count, don't popup
+    earnedCountRef.current = earnedNow.length;
+  } else if (earnedNow.length > earnedCountRef.current && !badgePopup) {
+    // New badge earned — show popup (only if not already showing one)
+    const newBadge = earnedNow[earnedNow.length - 1];
+    earnedCountRef.current = earnedNow.length;
+    setTimeout(() => setBadgePopup(newBadge), 100);
+  } else if (earnedNow.length !== earnedCountRef.current) {
+    earnedCountRef.current = earnedNow.length;
+  }
 
   return <div style={{ minHeight:'100vh',background:c.bg,color:c.text,fontFamily:sans }}>
     <header style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:`1px solid ${c.border}`,background:'rgba(15,13,10,0.95)',position:'sticky',top:0,zIndex:100 }}>
