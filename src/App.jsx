@@ -1183,16 +1183,16 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
 
       {/* Big Score */}
       <div style={{ textAlign:'center',padding:'0 28px 24px' }}>
-        <div style={{ position:'relative',width:160,height:160,margin:'0 auto' }}>
-          <svg width="160" height="160" viewBox="0 0 160 160" style={{ transform:'rotate(-90deg)' }}>
-            <circle cx="80" cy="80" r="70" fill="none" stroke={c.bgElevated} strokeWidth="8" />
-            <circle cx="80" cy="80" r="70" fill="none" stroke={scoreInfo.color} strokeWidth="8"
-              strokeDasharray={`${2 * Math.PI * 70 * tScore.total / 100} ${2 * Math.PI * 70}`}
+        <div style={{ position:'relative',width:180,height:180,margin:'0 auto' }}>
+          <svg width="180" height="180" viewBox="0 0 180 180" style={{ position:'absolute',inset:0,transform:'rotate(-90deg)' }}>
+            <circle cx="90" cy="90" r="80" fill="none" stroke={c.bgElevated} strokeWidth="6" />
+            <circle cx="90" cy="90" r="80" fill="none" stroke={scoreInfo.color} strokeWidth="6"
+              strokeDasharray={`${2 * Math.PI * 80 * tScore.total / 100} ${2 * Math.PI * 80}`}
               strokeLinecap="round" style={{ transition:'stroke-dasharray 1s ease' }} />
           </svg>
-          <div style={{ position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center' }}>
-            <div style={{ fontSize:52,fontWeight:700,fontFamily:serif,color:c.text,lineHeight:1 }}>{tScore.total}</div>
-            <div style={{ fontSize:12,fontWeight:600,color:scoreInfo.color,fontFamily:sans,marginTop:4 }}>{scoreInfo.label}</div>
+          <div style={{ position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:2 }}>
+            <div style={{ fontSize:56,fontWeight:700,fontFamily:serif,color:c.text,lineHeight:1 }}>{tScore.total}</div>
+            <div style={{ fontSize:12,fontWeight:600,color:scoreInfo.color,fontFamily:sans,marginTop:6 }}>{scoreInfo.label}</div>
           </div>
         </div>
       </div>
