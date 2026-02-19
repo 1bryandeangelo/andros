@@ -739,9 +739,210 @@ function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade, tScore }
       </div>
     </div>
 
-    {/* Premium analytics or upsell */}
-    {!isPremium?<div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:'28px 22px',textAlign:'center' }}><div style={{ fontSize:24,marginBottom:12,color:c.textMuted }}>🔒</div><h3 style={{ fontSize:16,fontWeight:700,marginBottom:8,color:c.text,fontFamily:sans }}>Premium Analytics</h3><p style={{ fontSize:13,color:c.textSec,lineHeight:1.5,marginBottom:22,fontFamily:sans }}>Unlock mood correlations, sleep trends, and detailed reports.</p><button onClick={onUpgrade} style={{ cursor:'pointer',background:c.bgElevated,border:`1px solid ${c.accent}50`,color:c.text,fontWeight:600,fontSize:13,padding:'12px 22px',borderRadius:10,fontFamily:sans }}>Unlock Premium — $8.99/mo</button><p style={{ fontSize:11,color:c.textMuted,marginTop:10,fontFamily:sans }}>7-day free trial</p></div>
-    :<div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18 }}><h3 style={{ fontSize:14,fontWeight:600,marginBottom:14,color:c.text,fontFamily:sans }}>Mood vs Habits</h3>{last7.map((d,i)=><div key={i} style={{ display:'grid',gridTemplateColumns:'36px 1fr 28px 36px',alignItems:'center',gap:8,marginBottom:7 }}><span style={{ fontSize:11,color:c.textSec,fontFamily:sans }}>{d.day}</span><div style={{ height:7,background:c.bgElevated,borderRadius:4,overflow:'hidden' }}><div style={{ height:'100%',borderRadius:4,width:d.count>0?((d.count/11)*100)+'%':'0%',background:c.accent,transition:'width 0.4s ease' }} /></div><span style={{ fontSize:14,textAlign:'center' }}>{d.mood?MOOD_OPTIONS.find(m=>m.value===d.mood).emoji:'—'}</span><span style={{ fontSize:10,color:c.textSec,fontFamily:'monospace',textAlign:'right' }}>{d.sleep?d.sleep+'h':'—'}</span></div>)}<div style={{ display:'flex',justifyContent:'center',gap:14,marginTop:14,fontSize:11,color:c.textSec,fontFamily:sans }}><span><span style={{ color:c.accent }}>■</span> Habits</span><span>😀 Mood</span><span>💤 Sleep</span></div></div>}
+    {/* Trends & Graphs */}
+    <TrendsSection checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={onUpgrade} tScore={tScore} />
+  </div>;
+}
+
+// ============================================================
+// TRENDS & GRAPHS (Premium)
+// ============================================================
+function MiniChart({ data, color, height = 80, type = 'line', labels, yMin, yMax }) {
+  if (!data || data.length === 0) return null;
+  const w = 100;
+  const h = height;
+  const pad = { top: 8, bottom: 20, left: 0, right: 0 };
+  const chartW = w - pad.left - pad.right;
+  const chartH = h - pad.top - pad.bottom;
+  const min = yMin !== undefined ? yMin : Math.min(...data.filter(v=>v!==null));
+  const max = yMax !== undefined ? yMax : Math.max(...data.filter(v=>v!==null));
+  const range = max - min || 1;
+
+  if (type === 'bar') {
+    const barW = chartW / data.length * 0.7;
+    const gap = chartW / data.length * 0.3;
+    return <svg viewBox={`0 0 ${w} ${h}`} style={{ width:'100%',height }}>
+      {data.map((v, i) => {
+        if (v === null) return null;
+        const x = pad.left + (i / data.length) * chartW + gap / 2;
+        const barH = ((v - min) / range) * chartH;
+        return <rect key={i} x={x} y={pad.top + chartH - barH} width={barW} height={Math.max(barH, 1)} rx={2} fill={color} opacity={0.8} />;
+      })}
+      {labels && labels.map((l, i) => (
+        <text key={i} x={pad.left + (i / data.length) * chartW + (chartW / data.length) / 2} y={h - 4} textAnchor="middle" fontSize="3.5" fill={c.textMuted} fontFamily={sans}>{l}</text>
+      ))}
+    </svg>;
+  }
+
+  // Line chart
+  const points = data.map((v, i) => {
+    if (v === null) return null;
+    const x = pad.left + (i / (data.length - 1 || 1)) * chartW;
+    const y = pad.top + chartH - ((v - min) / range) * chartH;
+    return { x, y, v };
+  }).filter(Boolean);
+
+  if (points.length < 2) return null;
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const areaD = pathD + ` L ${points[points.length-1].x} ${pad.top+chartH} L ${points[0].x} ${pad.top+chartH} Z`;
+
+  return <svg viewBox={`0 0 ${w} ${h}`} style={{ width:'100%',height }}>
+    <defs><linearGradient id={`g-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.2"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs>
+    <path d={areaD} fill={`url(#g-${color.replace('#','')})`} />
+    <path d={pathD} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="1.5" fill={color} />)}
+    {labels && labels.map((l, i) => {
+      const x = pad.left + (i / (data.length - 1 || 1)) * chartW;
+      return <text key={i} x={x} y={h - 4} textAnchor="middle" fontSize="3.5" fill={c.textMuted} fontFamily={sans}>{l}</text>;
+    })}
+  </svg>;
+}
+
+function TrendsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade, tScore }) {
+  const [range, setRange] = useState(7);
+  const [activeChart, setActiveChart] = useState('tscore');
+  const premiumLocked = !isPremium && range > 7;
+
+  // Generate data for the selected range
+  const days = Array.from({ length: range }, (_, i) => getDateStr(range - 1 - i));
+  const labels = days.map(d => {
+    const date = new Date(d + 'T12:00:00');
+    if (range <= 7) return date.toLocaleDateString('en-US', { weekday: 'narrow' });
+    if (range <= 30) return date.getDate().toString();
+    return date.toLocaleDateString('en-US', { month: 'narrow', day: 'numeric' });
+  });
+
+  // T-Score data (need to calculate for each historical day)
+  const tScoreData = days.map(d => {
+    const dayCheckins = checkins[d] || [];
+    if (dayCheckins.length === 0) return null;
+    // Simplified historical score — based on habits completed that day proportionally
+    const sleepHits = SCORE_CATEGORIES.sleep.habits.filter(h => dayCheckins.includes(h)).length / SCORE_CATEGORIES.sleep.habits.length;
+    const trainHits = SCORE_CATEGORIES.training.habits.filter(h => dayCheckins.includes(h)).length / SCORE_CATEGORIES.training.habits.length;
+    const nutriHits = SCORE_CATEGORIES.nutrition.habits.filter(h => dayCheckins.includes(h)).length / SCORE_CATEGORIES.nutrition.habits.length;
+    const lifeHits = SCORE_CATEGORIES.lifestyle.habits.filter(h => dayCheckins.includes(h)).length / SCORE_CATEGORIES.lifestyle.habits.length;
+    const raw = sleepHits * 30 + trainHits * 25 + nutriHits * 25 + lifeHits * 20;
+    return Math.round(raw * 0.9);
+  });
+
+  // Habits per day
+  const habitsData = days.map(d => (checkins[d] || []).length);
+
+  // Sleep hours
+  const sleepData = days.map(d => sleepLog[d] ? sleepLog[d].hours : null);
+
+  // Mood
+  const moodData = days.map(d => moodLog[d] ? moodLog[d].value : null);
+
+  // Category breakdown
+  const catData = {
+    sleep: days.map(d => { const h = checkins[d]||[]; return SCORE_CATEGORIES.sleep.habits.filter(x=>h.includes(x)).length / SCORE_CATEGORIES.sleep.habits.length * 100; }),
+    training: days.map(d => { const h = checkins[d]||[]; return SCORE_CATEGORIES.training.habits.filter(x=>h.includes(x)).length / SCORE_CATEGORIES.training.habits.length * 100; }),
+    nutrition: days.map(d => { const h = checkins[d]||[]; return SCORE_CATEGORIES.nutrition.habits.filter(x=>h.includes(x)).length / SCORE_CATEGORIES.nutrition.habits.length * 100; }),
+    lifestyle: days.map(d => { const h = checkins[d]||[]; return SCORE_CATEGORIES.lifestyle.habits.filter(x=>h.includes(x)).length / SCORE_CATEGORIES.lifestyle.habits.length * 100; }),
+  };
+
+  const charts = [
+    { id: 'tscore', name: 'T-Score', icon: '📊' },
+    { id: 'habits', name: 'Habits', icon: '✓' },
+    { id: 'sleep', name: 'Sleep', icon: '🌙' },
+    { id: 'mood', name: 'Mood', icon: '😀' },
+    { id: 'categories', name: 'Categories', icon: '⚡' },
+  ];
+
+  const rangeOptions = [
+    { value: 7, label: '7D', premium: false },
+    { value: 30, label: '30D', premium: true },
+    { value: 90, label: '90D', premium: true },
+    { value: 365, label: 'ALL', premium: true },
+  ];
+
+  // Calculate averages for the period
+  const validTScores = tScoreData.filter(v => v !== null);
+  const avgTScore = validTScores.length ? Math.round(validTScores.reduce((a,b)=>a+b,0) / validTScores.length) : 0;
+  const validSleep = sleepData.filter(v => v !== null);
+  const avgSleep = validSleep.length ? (validSleep.reduce((a,b)=>a+b,0) / validSleep.length).toFixed(1) : '—';
+  const validMood = moodData.filter(v => v !== null);
+  const avgMood = validMood.length ? (validMood.reduce((a,b)=>a+b,0) / validMood.length).toFixed(1) : '—';
+  const totalHabitsInRange = habitsData.reduce((a,b)=>a+b,0);
+  const activeDays = habitsData.filter(v => v > 0).length;
+
+  return <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:14 }}>
+    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14 }}>
+      <h3 style={{ fontSize:14,fontWeight:600,color:c.text,fontFamily:sans }}>Trends</h3>
+      {/* Range selector */}
+      <div style={{ display:'flex',gap:4 }}>
+        {rangeOptions.map(r => <button key={r.value} onClick={() => {
+          if (r.premium && !isPremium) { onUpgrade(); return; }
+          setRange(r.value);
+        }} style={{
+          padding:'4px 10px',borderRadius:6,border:'none',cursor:'pointer',fontFamily:sans,fontSize:10,fontWeight:600,letterSpacing:0.5,
+          background: range===r.value ? c.accent : c.bgElevated,
+          color: range===r.value ? c.bg : (r.premium && !isPremium ? c.textMuted+'60' : c.textMuted),
+          position:'relative',
+        }}>
+          {r.label}
+          {r.premium && !isPremium && <span style={{ position:'absolute',top:-2,right:-2,fontSize:6,color:c.accent }}>🔒</span>}
+        </button>)}
+      </div>
+    </div>
+
+    {/* Chart selector tabs */}
+    <div style={{ display:'flex',gap:4,marginBottom:14,overflowX:'auto' }}>
+      {charts.map(ch => <button key={ch.id} onClick={() => setActiveChart(ch.id)} style={{
+        padding:'6px 12px',borderRadius:8,border:`1px solid ${activeChart===ch.id ? c.accent+'40' : c.border}`,cursor:'pointer',
+        background: activeChart===ch.id ? c.accentGlow : 'transparent',
+        color: activeChart===ch.id ? c.accent : c.textMuted,
+        fontSize:11,fontWeight:600,fontFamily:sans,whiteSpace:'nowrap',
+        display:'flex',alignItems:'center',gap:4,
+      }}>
+        <span style={{ fontSize:12 }}>{ch.icon}</span>{ch.name}
+      </button>)}
+    </div>
+
+    {/* Chart area */}
+    <div style={{ minHeight:100,position:'relative' }}>
+      {premiumLocked ? <div style={{ textAlign:'center',padding:'20px 0' }}>
+        <div style={{ fontSize:20,marginBottom:8,color:c.textMuted }}>🔒</div>
+        <p style={{ fontSize:12,color:c.textSec,fontFamily:sans }}>Upgrade to Premium for {range}-day trends</p>
+      </div> : <>
+        {activeChart === 'tscore' && <MiniChart data={tScoreData} color={c.accent} labels={labels} yMin={0} yMax={100} />}
+        {activeChart === 'habits' && <MiniChart data={habitsData} color={c.accent} type="bar" labels={labels} yMin={0} yMax={11} />}
+        {activeChart === 'sleep' && <MiniChart data={sleepData} color={'#6ab06a'} labels={labels} yMin={3} yMax={12} />}
+        {activeChart === 'mood' && <MiniChart data={moodData} color={'#d4a44a'} labels={labels} yMin={1} yMax={6} />}
+        {activeChart === 'categories' && <div>
+          {Object.entries(SCORE_CATEGORIES).map(([key, cat]) => (
+            <div key={key} style={{ marginBottom:8 }}>
+              <div style={{ display:'flex',alignItems:'center',gap:4,marginBottom:2 }}>
+                <span style={{ fontSize:10 }}>{cat.icon}</span>
+                <span style={{ fontSize:10,color:c.textMuted,fontFamily:sans }}>{cat.label}</span>
+              </div>
+              <MiniChart data={catData[key]} color={key==='sleep'?'#6ab06a':key==='training'?c.accent:key==='nutrition'?'#c47a3a':'#5a8ac4'} height={40} labels={key==='lifestyle'?labels:undefined} yMin={0} yMax={100} />
+            </div>
+          ))}
+        </div>}
+      </>}
+    </div>
+
+    {/* Period summary */}
+    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8,marginTop:12,paddingTop:12,borderTop:`1px solid ${c.border}` }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:16,fontWeight:700,fontFamily:serif,color:c.accent }}>{avgTScore}</div>
+        <div style={{ fontSize:9,color:c.textMuted,fontFamily:sans }}>Avg Score</div>
+      </div>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:16,fontWeight:700,fontFamily:serif,color:c.text }}>{activeDays}</div>
+        <div style={{ fontSize:9,color:c.textMuted,fontFamily:sans }}>Active Days</div>
+      </div>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:16,fontWeight:700,fontFamily:serif,color:c.text }}>{avgSleep}</div>
+        <div style={{ fontSize:9,color:c.textMuted,fontFamily:sans }}>Avg Sleep</div>
+      </div>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:16,fontWeight:700,fontFamily:serif,color:c.text }}>{avgMood}</div>
+        <div style={{ fontSize:9,color:c.textMuted,fontFamily:sans }}>Avg Mood</div>
+      </div>
+    </div>
   </div>;
 }
 
