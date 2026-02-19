@@ -690,6 +690,7 @@ function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade, tScore }
   const earnedBadges = BADGES.filter(b => b.check(checkins, streak, ts));
   const lockedBadges = BADGES.filter(b => !b.check(checkins, streak, ts));
   const bestDay = Object.entries(checkins).reduce((best, [d, arr]) => arr.length > (best.count||0) ? { date: d, count: arr.length } : best, { count: 0 });
+  const [badgesExpanded, setBadgesExpanded] = useState(false);
 
   return <div>
     <h2 style={{ fontSize:20,fontWeight:400,marginBottom:20,color:c.text,fontFamily:serif }}>Your Progress</h2>
@@ -724,30 +725,37 @@ function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade, tScore }
       <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-end',height:110,gap:6 }}>{last7.map((d,i)=><div key={i} style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:6,height:'100%' }}><div style={{ flex:1,width:'100%',background:c.bgElevated,borderRadius:4,display:'flex',alignItems:'flex-end',overflow:'hidden' }}><div style={{ width:'100%',borderRadius:4,minHeight:2,height:d.count>0?((d.count/11)*100)+'%':'2px',background:d.count>=STREAK_THRESHOLD?c.accent:c.borderLight,transition:'height 0.4s ease' }} /></div><span style={{ fontSize:10,color:c.textMuted,fontWeight:500,fontFamily:sans }}>{d.day}</span></div>)}</div>
     </div>
 
-    {/* Badges */}
-    <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:14 }}>
-      <h3 style={{ fontSize:14,fontWeight:600,marginBottom:4,color:c.text,fontFamily:sans }}>Badges</h3>
-      <p style={{ fontSize:11,color:c.textMuted,marginBottom:14,fontFamily:sans }}>{earnedBadges.length} of {BADGES.length} earned</p>
-      <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10 }}>
-        {BADGES.map(b => {
-          const earned = b.check(checkins, streak, ts);
-          return <div key={b.id} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:6,padding:'8px 4px' }}>
-            <BadgeIcon badge={b} earned={earned} size={44} />
-            <span style={{ fontSize:9,color:earned?c.text:c.textMuted+'80',fontFamily:sans,textAlign:'center',fontWeight:earned?600:400,lineHeight:1.2 }}>{b.name}</span>
-          </div>;
-        })}
-      </div>
-    </div>
-
-    {/* Trends & Graphs */}
+    {/* Trends & Graphs - ABOVE badges */}
     <TrendsSection checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={onUpgrade} tScore={tScore} />
+
+    {/* Badges - collapsible, at bottom */}
+    <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,overflow:'hidden',marginBottom:14 }}>
+      <button onClick={()=>setBadgesExpanded(!badgesExpanded)} style={{ width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',padding:18,background:'none',border:'none',cursor:'pointer' }}>
+        <div>
+          <h3 style={{ fontSize:14,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:2,textAlign:'left' }}>Badges</h3>
+          <p style={{ fontSize:11,color:c.textMuted,fontFamily:sans,textAlign:'left' }}>{earnedBadges.length} of {BADGES.length} earned</p>
+        </div>
+        <span style={{ color:c.textMuted,fontSize:14,transform:badgesExpanded?'rotate(90deg)':'rotate(0)',transition:'transform 0.2s' }}>›</span>
+      </button>
+      {badgesExpanded&&<div style={{ padding:'0 18px 18px' }}>
+        <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10 }}>
+          {BADGES.map(b => {
+            const earned = b.check(checkins, streak, ts);
+            return <div key={b.id} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:6,padding:'8px 4px' }}>
+              <BadgeIcon badge={b} earned={earned} size={44} />
+              <span style={{ fontSize:9,color:earned?c.text:c.textMuted+'80',fontFamily:sans,textAlign:'center',fontWeight:earned?600:400,lineHeight:1.2 }}>{b.name}</span>
+            </div>;
+          })}
+        </div>
+      </div>}
+    </div>
   </div>;
 }
 
 // ============================================================
 // TRENDS & GRAPHS (Premium)
 // ============================================================
-function MiniChart({ data, color, height = 80, type = 'line', labels, yMin, yMax }) {
+function MiniChart({ data, color, height = 110, type = 'line', labels, yMin, yMax }) {
   if (!data || data.length === 0) return null;
   const w = 100;
   const h = height;
@@ -917,7 +925,7 @@ function TrendsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade, tSco
                 <span style={{ fontSize:10 }}>{cat.icon}</span>
                 <span style={{ fontSize:10,color:c.textMuted,fontFamily:sans }}>{cat.label}</span>
               </div>
-              <MiniChart data={catData[key]} color={key==='sleep'?'#6ab06a':key==='training'?c.accent:key==='nutrition'?'#c47a3a':'#5a8ac4'} height={40} labels={key==='lifestyle'?labels:undefined} yMin={0} yMax={100} />
+              <MiniChart data={catData[key]} color={key==='sleep'?'#6ab06a':key==='training'?c.accent:key==='nutrition'?'#c47a3a':'#5a8ac4'} height={50} labels={key==='lifestyle'?labels:undefined} yMin={0} yMax={100} />
             </div>
           ))}
         </div>}
