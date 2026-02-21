@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 // ============================================================
 // SUPABASE CONFIG — Fill these in to connect to your backend
@@ -728,6 +728,9 @@ function StatsView({ checkins, moodLog, sleepLog, isPremium, onUpgrade, tScore }
     {/* Trends & Graphs - ABOVE badges */}
     <TrendsSection checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={onUpgrade} tScore={tScore} />
 
+    {/* Habit Correlations - Premium */}
+    <CorrelationsSection checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={onUpgrade} />
+
     {/* Badges - collapsible, at bottom */}
     <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,overflow:'hidden',marginBottom:14 }}>
       <button onClick={()=>setBadgesExpanded(!badgesExpanded)} style={{ width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',padding:18,background:'none',border:'none',cursor:'pointer' }}>
@@ -951,6 +954,197 @@ function TrendsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade, tSco
         <div style={{ fontSize:9,color:c.textMuted,fontFamily:sans }}>Avg Mood</div>
       </div>
     </div>
+  </div>;
+}
+
+// ============================================================
+// HABIT CORRELATIONS (Premium)
+// ============================================================
+function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade }) {
+  // Need at least 7 days of data
+  const allDates = Object.keys(checkins).filter(d => (checkins[d] || []).length > 0).sort();
+  const hasEnoughData = allDates.length >= 7;
+
+  // Calculate correlations between each habit and mood/sleep/score
+  const insights = useMemo(() => {
+    if (!hasEnoughData) return [];
+    const results = [];
+    const habitNames = {};
+    DEFAULT_HABITS.forEach(h => { habitNames[h.id] = h.name; });
+
+    // For each habit, compare mood on days WITH vs WITHOUT
+    DEFAULT_HABITS.forEach(habit => {
+      const withDays = [];
+      const withoutDays = [];
+
+      allDates.forEach(d => {
+        const dayHabits = checkins[d] || [];
+        const mood = moodLog[d] ? moodLog[d].value : null;
+        if (mood === null) return;
+        if (dayHabits.includes(habit.id)) withDays.push(mood);
+        else withoutDays.push(mood);
+      });
+
+      if (withDays.length >= 3 && withoutDays.length >= 2) {
+        const avgWith = withDays.reduce((a, b) => a + b, 0) / withDays.length;
+        const avgWithout = withoutDays.reduce((a, b) => a + b, 0) / withoutDays.length;
+        const diff = avgWith - avgWithout;
+        const pctDiff = avgWithout > 0 ? Math.round((diff / avgWithout) * 100) : 0;
+
+        if (Math.abs(pctDiff) >= 5) {
+          results.push({
+            type: 'mood',
+            habitId: habit.id,
+            habitName: habit.name,
+            habitIcon: habit.icon,
+            direction: diff > 0 ? 'up' : 'down',
+            pct: Math.abs(pctDiff),
+            avgWith: avgWith.toFixed(1),
+            avgWithout: avgWithout.toFixed(1),
+            sampleWith: withDays.length,
+            sampleWithout: withoutDays.length,
+          });
+        }
+      }
+    });
+
+    // Sleep correlations
+    DEFAULT_HABITS.forEach(habit => {
+      const withDays = [];
+      const withoutDays = [];
+
+      allDates.forEach(d => {
+        const dayHabits = checkins[d] || [];
+        const sleep = sleepLog[d] ? sleepLog[d].hours : null;
+        if (sleep === null) return;
+        if (dayHabits.includes(habit.id)) withDays.push(sleep);
+        else withoutDays.push(sleep);
+      });
+
+      if (withDays.length >= 3 && withoutDays.length >= 2) {
+        const avgWith = withDays.reduce((a, b) => a + b, 0) / withDays.length;
+        const avgWithout = withoutDays.reduce((a, b) => a + b, 0) / withoutDays.length;
+        const diff = avgWith - avgWithout;
+
+        if (Math.abs(diff) >= 0.3) {
+          results.push({
+            type: 'sleep',
+            habitId: habit.id,
+            habitName: habit.name,
+            habitIcon: habit.icon,
+            direction: diff > 0 ? 'up' : 'down',
+            diff: Math.abs(diff).toFixed(1),
+            avgWith: avgWith.toFixed(1),
+            avgWithout: avgWithout.toFixed(1),
+            sampleWith: withDays.length,
+            sampleWithout: withoutDays.length,
+          });
+        }
+      }
+    });
+
+    // Habit combo insights — find pairs that correlate with best mood
+    const combos = [];
+    for (let i = 0; i < DEFAULT_HABITS.length; i++) {
+      for (let j = i + 1; j < DEFAULT_HABITS.length; j++) {
+        const h1 = DEFAULT_HABITS[i];
+        const h2 = DEFAULT_HABITS[j];
+        const bothDays = [];
+        const neitherDays = [];
+
+        allDates.forEach(d => {
+          const dayHabits = checkins[d] || [];
+          const mood = moodLog[d] ? moodLog[d].value : null;
+          if (mood === null) return;
+          const has1 = dayHabits.includes(h1.id);
+          const has2 = dayHabits.includes(h2.id);
+          if (has1 && has2) bothDays.push(mood);
+          else if (!has1 && !has2) neitherDays.push(mood);
+        });
+
+        if (bothDays.length >= 3 && neitherDays.length >= 2) {
+          const avgBoth = bothDays.reduce((a, b) => a + b, 0) / bothDays.length;
+          const avgNeither = neitherDays.reduce((a, b) => a + b, 0) / neitherDays.length;
+          const pctDiff = avgNeither > 0 ? Math.round(((avgBoth - avgNeither) / avgNeither) * 100) : 0;
+          if (pctDiff >= 10) {
+            combos.push({ h1, h2, pct: pctDiff, avgBoth: avgBoth.toFixed(1), sampleBoth: bothDays.length });
+          }
+        }
+      }
+    }
+    combos.sort((a, b) => b.pct - a.pct);
+
+    // Sort by impact
+    results.sort((a, b) => (b.pct || 0) - (a.pct || 0));
+
+    return { single: results.slice(0, 6), combos: combos.slice(0, 3) };
+  }, [checkins, moodLog, sleepLog, allDates.length, hasEnoughData]);
+
+  if (!isPremium) {
+    return <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:'28px 22px',textAlign:'center',marginBottom:14 }}>
+      <div style={{ fontSize:24,marginBottom:10,color:c.textMuted }}>🔗</div>
+      <h3 style={{ fontSize:15,fontWeight:700,marginBottom:6,color:c.text,fontFamily:sans }}>Habit Correlations</h3>
+      <p style={{ fontSize:12,color:c.textSec,lineHeight:1.5,marginBottom:18,fontFamily:sans }}>Discover which habits impact your mood and sleep the most. Find your winning combinations.</p>
+      <button onClick={onUpgrade} style={{ cursor:'pointer',background:c.bgElevated,border:`1px solid ${c.accent}50`,color:c.text,fontWeight:600,fontSize:13,padding:'12px 22px',borderRadius:10,fontFamily:sans }}>Unlock Premium — $8.99/mo</button>
+      <p style={{ fontSize:11,color:c.textMuted,marginTop:8,fontFamily:sans }}>7-day free trial</p>
+    </div>;
+  }
+
+  if (!hasEnoughData) {
+    return <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:22,marginBottom:14 }}>
+      <h3 style={{ fontSize:14,fontWeight:600,marginBottom:8,color:c.text,fontFamily:sans }}>Habit Correlations</h3>
+      <p style={{ fontSize:12,color:c.textSec,lineHeight:1.5,fontFamily:sans }}>Keep tracking for {7 - allDates.length} more days to unlock your personal insights. We need enough data to find meaningful patterns.</p>
+      <div style={{ marginTop:12,height:4,background:c.bgElevated,borderRadius:2,overflow:'hidden' }}>
+        <div style={{ height:'100%',width:Math.round((allDates.length / 7) * 100) + '%',background:c.accent,borderRadius:2 }} />
+      </div>
+    </div>;
+  }
+
+  const { single, combos } = insights;
+
+  return <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:14 }}>
+    <h3 style={{ fontSize:14,fontWeight:600,marginBottom:4,color:c.text,fontFamily:sans }}>Habit Correlations</h3>
+    <p style={{ fontSize:11,color:c.textMuted,marginBottom:16,fontFamily:sans }}>Based on {allDates.length} days of your data</p>
+
+    {/* Top single habit impacts */}
+    {single.length > 0 && <div style={{ marginBottom:16 }}>
+      <div style={{ fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:10,fontFamily:sans }}>Your Top Impacts</div>
+      {single.map((ins, i) => <div key={i} style={{ display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:i < single.length - 1 ? `1px solid ${c.border}` : 'none' }}>
+        <span style={{ fontSize:18,flexShrink:0 }}>{ins.habitIcon}</span>
+        <div style={{ flex:1,minWidth:0 }}>
+          <div style={{ fontSize:12,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:2 }}>{ins.habitName}</div>
+          <div style={{ fontSize:11,color:c.textSec,fontFamily:sans }}>
+            {ins.type === 'mood'
+              ? `Mood is ${ins.pct}% ${ins.direction === 'up' ? 'higher' : 'lower'} on days you do this`
+              : `${ins.diff}h ${ins.direction === 'up' ? 'more' : 'less'} sleep on days you do this`
+            }
+          </div>
+        </div>
+        <div style={{ flexShrink:0,textAlign:'right' }}>
+          <span style={{ fontSize:16,fontWeight:700,fontFamily:serif,color:ins.direction === 'up' ? '#6ab06a' : c.danger }}>
+            {ins.direction === 'up' ? '+' : '−'}{ins.type === 'mood' ? ins.pct + '%' : ins.diff + 'h'}
+          </span>
+          <div style={{ fontSize:9,color:c.textMuted,fontFamily:sans }}>{ins.type === 'mood' ? '😀 mood' : '💤 sleep'}</div>
+        </div>
+      </div>)}
+    </div>}
+
+    {/* Winning combos */}
+    {combos.length > 0 && <div>
+      <div style={{ fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:10,fontFamily:sans }}>Winning Combos</div>
+      {combos.map((combo, i) => <div key={i} style={{ padding:14,background:c.bgElevated,borderRadius:10,border:`1px solid ${c.accent}20`,marginBottom:8 }}>
+        <div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:6 }}>
+          <span style={{ fontSize:14 }}>{combo.h1.icon}</span>
+          <span style={{ fontSize:11,color:c.textMuted }}>+</span>
+          <span style={{ fontSize:14 }}>{combo.h2.icon}</span>
+          <span style={{ marginLeft:'auto',fontSize:18,fontWeight:700,fontFamily:serif,color:'#6ab06a' }}>+{combo.pct}%</span>
+        </div>
+        <div style={{ fontSize:12,color:c.text,fontFamily:sans,fontWeight:500 }}>{combo.h1.name} + {combo.h2.name}</div>
+        <div style={{ fontSize:10,color:c.textSec,marginTop:2,fontFamily:sans }}>Mood is {combo.pct}% higher when you do both (avg {combo.avgBoth}/6 over {combo.sampleBoth} days)</div>
+      </div>)}
+    </div>}
+
+    {single.length === 0 && combos.length === 0 && <p style={{ fontSize:12,color:c.textSec,fontFamily:sans,textAlign:'center',padding:'12px 0' }}>Keep tracking — we need more variation in your habits to find patterns. Try skipping different habits on different days.</p>}
   </div>;
 }
 
