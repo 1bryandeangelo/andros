@@ -967,10 +967,9 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
 
   // Calculate correlations between each habit and mood/sleep/score
   const insights = useMemo(() => {
-    if (!hasEnoughData) return [];
-    const results = [];
-    const habitNames = {};
-    DEFAULT_HABITS.forEach(h => { habitNames[h.id] = h.name; });
+    if (!hasEnoughData) return { moodInsights: [], sleepInsights: [], combos: [], moodSleepLink: null };
+    const moodInsights = [];
+    const sleepInsights = [];
 
     // For each habit, compare mood on days WITH vs WITHOUT
     DEFAULT_HABITS.forEach(habit => {
@@ -992,8 +991,7 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
         const pctDiff = avgWithout > 0 ? Math.round((diff / avgWithout) * 100) : 0;
 
         if (Math.abs(pctDiff) >= 5) {
-          results.push({
-            type: 'mood',
+          moodInsights.push({
             habitId: habit.id,
             habitName: habit.name,
             habitIcon: habit.icon,
@@ -1008,7 +1006,7 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
       }
     });
 
-    // Sleep correlations
+    // Sleep correlations for each habit
     DEFAULT_HABITS.forEach(habit => {
       const withDays = [];
       const withoutDays = [];
@@ -1017,8 +1015,8 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
         const dayHabits = checkins[d] || [];
         const sleep = sleepLog[d] ? sleepLog[d].hours : null;
         if (sleep === null) return;
-        if (dayHabits.includes(habit.id)) withDays.push(sleep);
-        else withoutDays.push(sleep);
+        if (dayHabits.includes(habit.id)) withDays.push(Number(sleep));
+        else withoutDays.push(Number(sleep));
       });
 
       if (withDays.length >= 3 && withoutDays.length >= 2) {
@@ -1026,9 +1024,8 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
         const avgWithout = withoutDays.reduce((a, b) => a + b, 0) / withoutDays.length;
         const diff = avgWith - avgWithout;
 
-        if (Math.abs(diff) >= 0.3) {
-          results.push({
-            type: 'sleep',
+        if (Math.abs(diff) >= 0.2) {
+          sleepInsights.push({
             habitId: habit.id,
             habitName: habit.name,
             habitIcon: habit.icon,
@@ -1042,6 +1039,26 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
         }
       }
     });
+
+    // Mood → Sleep link: do you sleep better on good mood days?
+    let moodSleepLink = null;
+    const goodMoodSleep = [];
+    const badMoodSleep = [];
+    allDates.forEach(d => {
+      const mood = moodLog[d] ? moodLog[d].value : null;
+      const sleep = sleepLog[d] ? Number(sleepLog[d].hours) : null;
+      if (mood === null || sleep === null) return;
+      if (mood >= 4) goodMoodSleep.push(sleep);
+      else badMoodSleep.push(sleep);
+    });
+    if (goodMoodSleep.length >= 3 && badMoodSleep.length >= 2) {
+      const avgGood = goodMoodSleep.reduce((a, b) => a + b, 0) / goodMoodSleep.length;
+      const avgBad = badMoodSleep.reduce((a, b) => a + b, 0) / badMoodSleep.length;
+      const diff = avgGood - avgBad;
+      if (Math.abs(diff) >= 0.2) {
+        moodSleepLink = { diff: Math.abs(diff).toFixed(1), direction: diff > 0 ? 'more' : 'less', avgGood: avgGood.toFixed(1), avgBad: avgBad.toFixed(1) };
+      }
+    }
 
     // Habit combo insights — find pairs that correlate with best mood
     const combos = [];
@@ -1075,9 +1092,10 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
     combos.sort((a, b) => b.pct - a.pct);
 
     // Sort by impact
-    results.sort((a, b) => (b.pct || 0) - (a.pct || 0));
+    moodInsights.sort((a, b) => b.pct - a.pct);
+    sleepInsights.sort((a, b) => parseFloat(b.diff) - parseFloat(a.diff));
 
-    return { single: results.slice(0, 6), combos: combos.slice(0, 3) };
+    return { moodInsights: moodInsights.slice(0, 5), sleepInsights: sleepInsights.slice(0, 5), combos: combos.slice(0, 3), moodSleepLink };
   }, [checkins, moodLog, sleepLog, allDates.length, hasEnoughData]);
 
   if (!isPremium) {
@@ -1100,38 +1118,62 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
     </div>;
   }
 
-  const { single, combos } = insights;
+  const { moodInsights, sleepInsights, combos, moodSleepLink } = insights;
+
+  const renderInsight = (ins, i, total, type) => <div key={i} style={{ display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:i < total - 1 ? `1px solid ${c.border}` : 'none' }}>
+    <span style={{ fontSize:18,flexShrink:0 }}>{ins.habitIcon}</span>
+    <div style={{ flex:1,minWidth:0 }}>
+      <div style={{ fontSize:12,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:2 }}>{ins.habitName}</div>
+      <div style={{ fontSize:11,color:c.textSec,fontFamily:sans }}>
+        {type === 'mood'
+          ? ins.direction === 'up'
+            ? `Mood is ${ins.pct}% higher on days you do this`
+            : `Mood drops ${ins.pct}% on days you skip this`
+          : ins.direction === 'up'
+            ? `You sleep ${ins.diff}h more on days you do this`
+            : `You sleep ${ins.diff}h less when you skip this`
+        }
+      </div>
+    </div>
+    <div style={{ flexShrink:0,textAlign:'right' }}>
+      <span style={{ fontSize:16,fontWeight:700,fontFamily:serif,color:ins.direction === 'up' ? '#6ab06a' : '#c45c5c' }}>
+        {ins.direction === 'up' ? '+' : '−'}{type === 'mood' ? ins.pct + '%' : ins.diff + 'h'}
+      </span>
+      <div style={{ fontSize:9,color:c.textMuted,fontFamily:sans }}>{type === 'mood' ? '😀 mood' : '💤 sleep'}</div>
+    </div>
+  </div>;
 
   return <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:14 }}>
     <h3 style={{ fontSize:14,fontWeight:600,marginBottom:4,color:c.text,fontFamily:sans }}>Habit Correlations</h3>
     <p style={{ fontSize:11,color:c.textMuted,marginBottom:16,fontFamily:sans }}>Based on {allDates.length} days of your data</p>
 
-    {/* Top single habit impacts */}
-    {single.length > 0 && <div style={{ marginBottom:16 }}>
-      <div style={{ fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:10,fontFamily:sans }}>Your Top Impacts</div>
-      {single.map((ins, i) => <div key={i} style={{ display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:i < single.length - 1 ? `1px solid ${c.border}` : 'none' }}>
-        <span style={{ fontSize:18,flexShrink:0 }}>{ins.habitIcon}</span>
-        <div style={{ flex:1,minWidth:0 }}>
-          <div style={{ fontSize:12,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:2 }}>{ins.habitName}</div>
-          <div style={{ fontSize:11,color:c.textSec,fontFamily:sans }}>
-            {ins.type === 'mood'
-              ? `Mood is ${ins.pct}% ${ins.direction === 'up' ? 'higher' : 'lower'} on days you do this`
-              : `${ins.diff}h ${ins.direction === 'up' ? 'more' : 'less'} sleep on days you do this`
-            }
-          </div>
-        </div>
-        <div style={{ flexShrink:0,textAlign:'right' }}>
-          <span style={{ fontSize:16,fontWeight:700,fontFamily:serif,color:ins.direction === 'up' ? '#6ab06a' : c.danger }}>
-            {ins.direction === 'up' ? '+' : '−'}{ins.type === 'mood' ? ins.pct + '%' : ins.diff + 'h'}
-          </span>
-          <div style={{ fontSize:9,color:c.textMuted,fontFamily:sans }}>{ins.type === 'mood' ? '😀 mood' : '💤 sleep'}</div>
-        </div>
-      </div>)}
+    {/* Mood impacts */}
+    {moodInsights.length > 0 && <div style={{ marginBottom:16 }}>
+      <div style={{ fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:10,fontFamily:sans }}>😀 Mood Impacts</div>
+      {moodInsights.map((ins, i) => renderInsight(ins, i, moodInsights.length, 'mood'))}
+    </div>}
+
+    {/* Sleep impacts */}
+    {sleepInsights.length > 0 && <div style={{ marginBottom:16 }}>
+      <div style={{ fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:10,fontFamily:sans }}>💤 Sleep Impacts</div>
+      {sleepInsights.map((ins, i) => renderInsight(ins, i, sleepInsights.length, 'sleep'))}
+    </div>}
+
+    {/* Mood ↔ Sleep link */}
+    {moodSleepLink && <div style={{ padding:14,background:c.bgElevated,borderRadius:10,border:`1px solid ${c.accent}20`,marginBottom:16 }}>
+      <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:4 }}>
+        <span style={{ fontSize:14 }}>😀</span>
+        <span style={{ fontSize:11,color:c.textMuted }}>↔</span>
+        <span style={{ fontSize:14 }}>💤</span>
+        <span style={{ marginLeft:'auto',fontSize:16,fontWeight:700,fontFamily:serif,color:'#6ab06a' }}>{moodSleepLink.diff}h</span>
+      </div>
+      <div style={{ fontSize:12,color:c.text,fontFamily:sans,fontWeight:500 }}>Mood & Sleep Connection</div>
+      <div style={{ fontSize:10,color:c.textSec,marginTop:2,fontFamily:sans }}>You sleep {moodSleepLink.diff}h {moodSleepLink.direction} on days you rate your mood Good or higher ({moodSleepLink.avgGood}h vs {moodSleepLink.avgBad}h)</div>
     </div>}
 
     {/* Winning combos */}
     {combos.length > 0 && <div>
-      <div style={{ fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:10,fontFamily:sans }}>Winning Combos</div>
+      <div style={{ fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:10,fontFamily:sans }}>🏆 Winning Combos</div>
       {combos.map((combo, i) => <div key={i} style={{ padding:14,background:c.bgElevated,borderRadius:10,border:`1px solid ${c.accent}20`,marginBottom:8 }}>
         <div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:6 }}>
           <span style={{ fontSize:14 }}>{combo.h1.icon}</span>
@@ -1144,7 +1186,7 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
       </div>)}
     </div>}
 
-    {single.length === 0 && combos.length === 0 && <p style={{ fontSize:12,color:c.textSec,fontFamily:sans,textAlign:'center',padding:'12px 0' }}>Keep tracking — we need more variation in your habits to find patterns. Try skipping different habits on different days.</p>}
+    {moodInsights.length === 0 && sleepInsights.length === 0 && combos.length === 0 && <p style={{ fontSize:12,color:c.textSec,fontFamily:sans,textAlign:'center',padding:'12px 0' }}>Keep tracking — we need more variation in your habits to find patterns. Try skipping different habits on different days.</p>}
   </div>;
 }
 
