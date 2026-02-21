@@ -1518,9 +1518,9 @@ function LandingPage({ onGetStarted, onLogin }) {
   const habits11 = ['7–9 hours sleep','Resistance training','Healthy fats','Zinc intake','No alcohol','Morning sunlight','Vitamin D','30-min walk','Meditation','No seed oils','Cold exposure'];
 
   const features = [
-    { label: 'Daily Score', title: 'Your testosterone score, daily', desc: 'A weighted score from 0–100 based on the actual science of what impacts testosterone production. Not a generic health score — built specifically for T optimization.', img: '/screenshots/scorecard.png' },
-    { label: 'Trends', title: 'Watch your progress over time', desc: 'Track your T-Score, sleep, mood, and habit completion over 7, 30, and 90 days. See the correlation between what you do and how you feel.', img: '/screenshots/trends.png' },
-    { label: 'Education', title: 'The science, not the hype', desc: 'Every habit links to the actual research. Learn how your body makes testosterone, what disrupts it, and which protocols are backed by evidence.', img: '/screenshots/learn.png' },
+    { label: 'Daily Score', title: 'Your testosterone score, daily', desc: 'A weighted score from 0–100 based on the actual science of what impacts testosterone production. Not a generic health score — built specifically for T optimization.', img: '/screenshots/scorecard.jpg' },
+    { label: 'Trends', title: 'Watch your progress over time', desc: 'Track your T-Score, sleep, mood, and habit completion over 7, 30, and 90 days. See the correlation between what you do and how you feel.', img: '/screenshots/trends.jpg' },
+    { label: 'Education', title: 'The science, not the hype', desc: 'Every habit links to the actual research. Learn how your body makes testosterone, what disrupts it, and which protocols are backed by evidence.', img: '/screenshots/learn.jpg' },
   ];
 
   return <div style={{ background: c.bg, color: c.text, ...body, overflowX: 'hidden' }}>
@@ -1543,7 +1543,7 @@ function LandingPage({ onGetStarted, onLogin }) {
       <button onClick={onGetStarted} style={{ display:'inline-flex',alignItems:'center',gap:10,padding:'16px 40px',background:`linear-gradient(135deg,${c.accent},${c.accentBright})`,color:c.bg,...body,fontSize:14,fontWeight:700,letterSpacing:1,textTransform:'uppercase',borderRadius:10,border:'none',cursor:'pointer',boxShadow:'0 4px 24px rgba(212,164,74,0.25)',opacity:0,animation:'landFadeUp 0.8s ease forwards 0.8s' }}>Start Free — No Download</button>
       <p style={{ fontSize:12,color:c.textMuted,marginTop:14,opacity:0,animation:'landFadeUp 0.8s ease forwards 1s' }}>Free forever · Premium analytics $8.99/mo</p>
       <div style={{ marginTop:60,opacity:0,animation:'landFadeUp 1s ease forwards 1.1s' }}>
-        <img src="/screenshots/scorecard.png" alt="Andros T-Score" style={{ width:260,borderRadius:24,border:`1px solid ${c.border}`,boxShadow:'0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(212,164,74,0.08)' }} />
+        <img src="/screenshots/scorecard.jpg" alt="Andros T-Score" style={{ width:260,borderRadius:24,border:`1px solid ${c.border}`,boxShadow:'0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(212,164,74,0.08)' }} />
       </div>
     </section>
 
