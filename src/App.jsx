@@ -1477,6 +1477,187 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
   </div>;
 }
 
+// ============================================================
+// LANDING PAGE
+// ============================================================
+function LandingPage({ onGetStarted, onLogin }) {
+  const [visible, setVisible] = useState(new Set());
+  const revealRef = useRef([]);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) setVisible(prev => new Set([...prev, e.target.dataset.idx]));
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    revealRef.current.forEach(el => el && obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  const rv = (idx) => ({
+    ref: el => revealRef.current[idx] = el,
+    'data-idx': idx,
+    style: {
+      opacity: visible.has(String(idx)) ? 1 : 0,
+      transform: visible.has(String(idx)) ? 'translateY(0)' : 'translateY(30px)',
+      transition: 'all 0.8s cubic-bezier(0.25,0.46,0.45,0.94)',
+    }
+  });
+
+  const heading = { fontFamily: "'Cormorant Garamond', Georgia, serif" };
+  const body = { fontFamily: "'DM Sans', -apple-system, sans-serif" };
+
+  useEffect(() => {
+    // Load fonts
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  }, []);
+
+  const habits11 = ['7–9 hours sleep','Resistance training','Healthy fats','Zinc intake','No alcohol','Morning sunlight','Vitamin D','30-min walk','Meditation','No seed oils','Cold exposure'];
+
+  const features = [
+    { label: 'Daily Score', title: 'Your testosterone score, daily', desc: 'A weighted score from 0–100 based on the actual science of what impacts testosterone production. Not a generic health score — built specifically for T optimization.', img: '/screenshots/scorecard.png' },
+    { label: 'Trends', title: 'Watch your progress over time', desc: 'Track your T-Score, sleep, mood, and habit completion over 7, 30, and 90 days. See the correlation between what you do and how you feel.', img: '/screenshots/trends.png' },
+    { label: 'Education', title: 'The science, not the hype', desc: 'Every habit links to the actual research. Learn how your body makes testosterone, what disrupts it, and which protocols are backed by evidence.', img: '/screenshots/learn.png' },
+  ];
+
+  return <div style={{ background: c.bg, color: c.text, ...body, overflowX: 'hidden' }}>
+
+    {/* NAV */}
+    <nav style={{ position:'fixed',top:0,width:'100%',padding:'18px 24px',display:'flex',justifyContent:'space-between',alignItems:'center',zIndex:100,background:'rgba(10,9,8,0.85)',backdropFilter:'blur(20px)',borderBottom:`1px solid rgba(42,37,32,0.5)` }}>
+      <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+        <span style={{ color:c.accent,...heading,fontWeight:700,fontSize:18 }}>+</span>
+        <span style={{ ...body,fontSize:11,fontWeight:700,letterSpacing:4,textTransform:'uppercase',color:c.text }}>Andros</span>
+      </div>
+      <button onClick={onGetStarted} style={{ padding:'10px 24px',background:'transparent',border:`1px solid ${c.accent}`,color:c.accent,...body,fontSize:12,fontWeight:600,letterSpacing:1,textTransform:'uppercase',borderRadius:6,cursor:'pointer' }}>Start Free</button>
+    </nav>
+
+    {/* HERO */}
+    <section style={{ position:'relative',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'120px 24px 80px',overflow:'hidden' }}>
+      <div style={{ position:'absolute',top:-200,left:'50%',transform:'translateX(-50%)',width:800,height:600,background:'radial-gradient(ellipse,rgba(212,164,74,0.08) 0%,transparent 70%)',pointerEvents:'none' }} />
+      <div style={{ fontSize:11,fontWeight:600,letterSpacing:4,textTransform:'uppercase',color:c.accent,marginBottom:24,...body,opacity:0,animation:'landFadeUp 0.8s ease forwards 0.2s' }}>Testosterone Optimization</div>
+      <h1 style={{ ...heading,fontSize:'clamp(42px,8vw,72px)',fontWeight:400,lineHeight:1.05,color:c.text,marginBottom:8,opacity:0,animation:'landFadeUp 0.8s ease forwards 0.4s' }}>Optimize your T.<br/><em style={{ fontStyle:'italic',color:c.accent }}>Naturally.</em></h1>
+      <p style={{ ...body,fontSize:17,color:c.textSec,maxWidth:440,lineHeight:1.6,margin:'20px auto 40px',opacity:0,animation:'landFadeUp 0.8s ease forwards 0.6s' }}>11 science-backed daily habits. Track your score. See what's actually moving the needle.</p>
+      <button onClick={onGetStarted} style={{ display:'inline-flex',alignItems:'center',gap:10,padding:'16px 40px',background:`linear-gradient(135deg,${c.accent},${c.accentBright})`,color:c.bg,...body,fontSize:14,fontWeight:700,letterSpacing:1,textTransform:'uppercase',borderRadius:10,border:'none',cursor:'pointer',boxShadow:'0 4px 24px rgba(212,164,74,0.25)',opacity:0,animation:'landFadeUp 0.8s ease forwards 0.8s' }}>Start Free — No Download</button>
+      <p style={{ fontSize:12,color:c.textMuted,marginTop:14,opacity:0,animation:'landFadeUp 0.8s ease forwards 1s' }}>Free forever · Premium analytics $8.99/mo</p>
+      <div style={{ marginTop:60,opacity:0,animation:'landFadeUp 1s ease forwards 1.1s' }}>
+        <img src="/screenshots/scorecard.png" alt="Andros T-Score" style={{ width:260,borderRadius:24,border:`1px solid ${c.border}`,boxShadow:'0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(212,164,74,0.08)' }} />
+      </div>
+    </section>
+
+    {/* STAT BANNER */}
+    <div {...rv(0)} style={{ ...rv(0).style, padding:'60px 24px',textAlign:'center',borderTop:`1px solid ${c.border}`,borderBottom:`1px solid ${c.border}`,background:c.bgCard }}>
+      <div style={{ ...heading,fontSize:'clamp(48px,10vw,72px)',fontWeight:700,color:c.accent,lineHeight:1 }}>−30%</div>
+      <p style={{ ...body,fontSize:15,color:c.textSec,maxWidth:400,margin:'16px auto 0',lineHeight:1.6 }}>Average male testosterone levels have dropped over 30% in the last 40 years. Modern diet, poor sleep, and sedentary habits are the primary drivers.</p>
+      <p style={{ fontSize:11,color:c.textMuted,marginTop:12 }}>Journal of Clinical Endocrinology & Metabolism</p>
+    </div>
+
+    {/* HOW IT WORKS */}
+    <section style={{ padding:'100px 24px',maxWidth:800,margin:'0 auto' }}>
+      <div {...rv(1)}>
+        <div style={{ ...body,fontSize:10,fontWeight:700,letterSpacing:4,textTransform:'uppercase',color:c.accent,marginBottom:16 }}>How It Works</div>
+        <h2 style={{ ...heading,fontSize:'clamp(28px,5vw,42px)',fontWeight:400,color:c.text,lineHeight:1.15,marginBottom:20 }}>Three minutes a day.<br/>That's it.</h2>
+        <p style={{ fontSize:15,color:c.textSec,lineHeight:1.7,maxWidth:520 }}>No calorie counting. No gym logs. Just check off the habits that science says matter most for testosterone production.</p>
+      </div>
+      <div style={{ display:'grid',gap:24,marginTop:48 }}>
+        {[
+          { n:'1', t:'Track your habits', d:'Check off 11 science-backed daily habits — sleep, training, nutrition, and lifestyle factors that directly influence testosterone.' },
+          { n:'2', t:'Get your T-Score', d:"Our formula weights each habit by its actual impact on testosterone. Sleep matters more than cold showers. The score reflects that." },
+          { n:'3', t:'See what works', d:'Watch your score trend upward. Track mood, sleep, and energy alongside your habits. Spot the patterns that matter for your body.' },
+        ].map((s,i) => <div key={i} {...rv(2+i)} style={{ ...rv(2+i).style, display:'flex',gap:20,alignItems:'flex-start',padding:28,background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:16 }}>
+          <div style={{ flexShrink:0,width:44,height:44,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:12,background:'rgba(212,164,74,0.1)',border:'1px solid rgba(212,164,74,0.2)',...heading,fontSize:20,fontWeight:700,color:c.accent }}>{s.n}</div>
+          <div><h3 style={{ ...body,fontSize:16,fontWeight:600,color:c.text,marginBottom:6 }}>{s.t}</h3><p style={{ fontSize:13,color:c.textSec,lineHeight:1.6 }}>{s.d}</p></div>
+        </div>)}
+      </div>
+    </section>
+
+    {/* THE 11 HABITS */}
+    <section style={{ padding:'80px 24px',maxWidth:800,margin:'0 auto' }}>
+      <div {...rv(5)}>
+        <div style={{ ...body,fontSize:10,fontWeight:700,letterSpacing:4,textTransform:'uppercase',color:c.accent,marginBottom:16 }}>The Protocol</div>
+        <h2 style={{ ...heading,fontSize:'clamp(28px,5vw,42px)',fontWeight:400,color:c.text,lineHeight:1.15,marginBottom:20 }}>11 habits backed by<br/>real research</h2>
+        <p style={{ fontSize:15,color:c.textSec,lineHeight:1.7,maxWidth:520 }}>Every habit in Andros is linked to published studies on testosterone, cortisol, and hormone optimization. No bro science.</p>
+      </div>
+      <div {...rv(6)} style={{ ...rv(6).style, display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:12,marginTop:40 }}>
+        {habits11.map((h,i) => <div key={i} style={{ padding:'14px 16px',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:10,display:'flex',alignItems:'center',gap:10,fontSize:13,color:c.text }}>
+          <span style={{ color:c.accent,fontWeight:300,fontSize:16,flexShrink:0 }}>+</span>{h}
+        </div>)}
+      </div>
+    </section>
+
+    {/* FEATURES */}
+    <section style={{ padding:'80px 24px',maxWidth:800,margin:'0 auto' }}>
+      <div {...rv(7)}>
+        <div style={{ ...body,fontSize:10,fontWeight:700,letterSpacing:4,textTransform:'uppercase',color:c.accent,marginBottom:16 }}>Features</div>
+        <h2 style={{ ...heading,fontSize:'clamp(28px,5vw,42px)',fontWeight:400,color:c.text,lineHeight:1.15,marginBottom:48 }}>Built for men who<br/>want to know <em style={{ ...heading,fontStyle:'italic',color:c.accent }}>why</em></h2>
+      </div>
+      {features.map((f,i) => <div key={i} {...rv(8+i)} style={{ ...rv(8+i).style, display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,alignItems:'center',padding:40,background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:20,marginBottom:24 }}>
+        <div style={{ order: i%2===1 ? 2 : 1 }}>
+          <div style={{ fontSize:10,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:c.accent,marginBottom:12 }}>{f.label}</div>
+          <h3 style={{ ...heading,fontSize:24,fontWeight:400,color:c.text,marginBottom:12,lineHeight:1.2 }}>{f.title}</h3>
+          <p style={{ fontSize:14,color:c.textSec,lineHeight:1.7 }}>{f.desc}</p>
+        </div>
+        <div style={{ display:'flex',justifyContent:'center', order: i%2===1 ? 1 : 2 }}>
+          <img src={f.img} alt={f.label} style={{ width:'100%',maxWidth:220,borderRadius:16,border:`1px solid ${c.border}`,boxShadow:'0 20px 40px rgba(0,0,0,0.4)' }} />
+        </div>
+      </div>)}
+    </section>
+
+    {/* SCIENCE BAR */}
+    <div {...rv(11)} style={{ ...rv(11).style, padding:'80px 24px',background:c.bgCard,borderTop:`1px solid ${c.border}`,borderBottom:`1px solid ${c.border}`,textAlign:'center' }}>
+      <div style={{ width:40,height:1,background:c.accent,margin:'0 auto 24px',opacity:0.5 }} />
+      <h2 style={{ ...heading,fontSize:'clamp(24px,4vw,36px)',fontWeight:400,color:c.text,marginBottom:16 }}>Backed by real science</h2>
+      <p style={{ fontSize:14,color:c.textSec,maxWidth:480,margin:'0 auto 32px',lineHeight:1.6 }}>Every habit and protocol in Andros is sourced from peer-reviewed research. We show our work — because you deserve to know what's actually proven.</p>
+      <div style={{ display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap' }}>
+        {['PubMed','JCEM','10+ cited studies','Peer-reviewed'].map((b,i) => <span key={i} style={{ padding:'8px 16px',border:`1px solid ${c.border}`,borderRadius:8,fontSize:11,color:c.textMuted,fontWeight:500,letterSpacing:0.5,background:c.bgElevated }}>{b}</span>)}
+      </div>
+    </div>
+
+    {/* BEFORE TRT */}
+    <section style={{ padding:'100px 24px',maxWidth:800,margin:'0 auto',textAlign:'center' }}>
+      <div {...rv(12)}>
+        <div style={{ width:40,height:1,background:c.accent,margin:'0 auto 24px',opacity:0.5 }} />
+        <h2 style={{ ...heading,fontSize:'clamp(28px,5vw,42px)',fontWeight:400,color:c.text,maxWidth:500,margin:'0 auto 16px',lineHeight:1.15 }}>Before TRT,<br/>try this.</h2>
+        <p style={{ fontSize:15,color:c.textSec,maxWidth:440,margin:'0 auto',lineHeight:1.7 }}>Thinking about testosterone replacement? Most men haven't exhausted what lifestyle changes alone can do. Give your body 90 days of the right inputs and see what happens.</p>
+      </div>
+    </section>
+
+    {/* FINAL CTA */}
+    <div style={{ padding:'80px 24px',textAlign:'center',position:'relative' }}>
+      <div style={{ position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:600,height:400,background:'radial-gradient(ellipse,rgba(212,164,74,0.06) 0%,transparent 70%)',pointerEvents:'none' }} />
+      <h2 style={{ ...heading,fontSize:'clamp(32px,6vw,52px)',fontWeight:400,color:c.text,marginBottom:16,lineHeight:1.1 }}>Start optimizing<br/><em style={{ ...heading,fontStyle:'italic',color:c.accent }}>today</em></h2>
+      <p style={{ fontSize:15,color:c.textSec,marginBottom:36 }}>Free. No download. Takes 30 seconds.</p>
+      <button onClick={onGetStarted} style={{ display:'inline-flex',padding:'16px 40px',background:`linear-gradient(135deg,${c.accent},${c.accentBright})`,color:c.bg,...body,fontSize:14,fontWeight:700,letterSpacing:1,textTransform:'uppercase',borderRadius:10,border:'none',cursor:'pointer',boxShadow:'0 4px 24px rgba(212,164,74,0.25)' }}>Start Free Now</button>
+      <p style={{ fontSize:12,color:c.textMuted,marginTop:14 }}>No credit card required</p>
+    </div>
+
+    {/* FOOTER */}
+    <footer style={{ padding:'40px 24px',borderTop:`1px solid ${c.border}`,display:'flex',justifyContent:'space-between',alignItems:'center',maxWidth:800,margin:'0 auto',flexWrap:'wrap',gap:16 }}>
+      <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+        <span style={{ color:c.accent,...heading,fontWeight:700,fontSize:14 }}>+</span>
+        <span style={{ ...body,fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:c.text }}>Andros</span>
+      </div>
+      <div style={{ display:'flex',gap:20 }}>
+        {[{t:'Privacy',h:'/privacy'},{t:'Terms',h:'/terms'},{t:'Support',h:'mailto:support@andros.bio'}].map((l,i) => <a key={i} href={l.h} style={{ color:c.textMuted,textDecoration:'none',fontSize:12 }}>{l.t}</a>)}
+        <button onClick={onLogin} style={{ color:c.textMuted,background:'none',border:'none',fontSize:12,cursor:'pointer' }}>Log In</button>
+      </div>
+    </footer>
+
+    {/* Keyframe animation */}
+    <style>{`
+      @keyframes landFadeUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @media (max-width: 640px) {
+        .land-feature-grid { grid-template-columns: 1fr !important; }
+      }
+    `}</style>
+  </div>;
+}
+
 function AuthScreen({ onLogin }) {
   const [mode,setMode]=useState('welcome');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [name,setName]=useState('');const [error,setError]=useState('');const [loading,setLoading]=useState(false);
   const inp = { width:'100%',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:8,padding:'14px 16px',fontSize:15,color:c.text,outline:'none',boxSizing:'border-box',fontFamily:sans };
@@ -1495,17 +1676,7 @@ function AuthScreen({ onLogin }) {
     setLoading(false);
   };
 
-  if (mode==='welcome') return <div style={{ minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,background:`radial-gradient(ellipse at 50% 30%,rgba(212,164,74,0.05) 0%,transparent 55%),${c.bg}` }}><div style={{ maxWidth:380,textAlign:'center',width:'100%' }}>
-    <div style={{ marginBottom:20 }}><div style={{ fontSize:32,fontWeight:300,color:c.accent,marginBottom:8 }}>+</div><h1 style={{ fontSize:36,fontWeight:700,letterSpacing:6,fontFamily:serif,color:c.accent }}>ANDROS</h1></div>
-    <p style={{ fontSize:16,color:c.textSec,marginBottom:28,fontFamily:serif,fontStyle:'italic' }}>Optimize naturally.</p>
-    <div style={{ width:32,height:1,background:c.accent,margin:'0 auto 28px',opacity:0.3 }} />
-    <p style={{ fontSize:14,color:c.textSec,lineHeight:1.7,marginBottom:32,fontFamily:sans }}>Track science-backed habits. Follow structured protocols. Watch your energy, mood, and performance transform.</p>
-    {['10+ science-backed habits','Mood & sleep tracking','Optimization protocols','Streak rewards & leveling'].map((f,i)=><div key={i} style={{ display:'flex',alignItems:'center',gap:10,fontSize:13,color:c.text,marginBottom:10,textAlign:'left',fontFamily:sans }}><span style={{ color:c.accent,fontWeight:300,fontSize:14 }}>+</span><span>{f}</span></div>)}
-    <button onClick={()=>setMode('signup')} style={{ width:'100%',padding:15,borderRadius:10,border:'none',cursor:'pointer',background:c.accent,color:c.bg,fontSize:15,fontWeight:700,marginTop:28,fontFamily:sans }}>Get Started — It's Free</button>
-    <button onClick={()=>setMode('login')} style={{ width:'100%',padding:14,borderRadius:10,cursor:'pointer',marginTop:10,background:'transparent',border:`1px solid ${c.border}`,color:c.text,fontSize:14,fontFamily:sans }}>I already have an account</button>
-    {USE_SUPABASE&&<div style={{ marginTop:20,fontSize:11,color:c.textMuted,fontFamily:sans }}>☁ Cloud sync enabled</div>}
-    {!USE_SUPABASE&&<div style={{ marginTop:20,fontSize:11,color:c.textMuted,fontFamily:sans }}>📱 Offline mode — data saved locally</div>}
-  </div></div>;
+  if (mode==='welcome') return <LandingPage onGetStarted={()=>setMode('signup')} onLogin={()=>setMode('login')} />;
 
   return <div style={{ minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,background:c.bg }}><div style={{ maxWidth:380,width:'100%' }}>
     <button onClick={()=>setMode('welcome')} style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'none',color:c.textSec,fontSize:13,cursor:'pointer',marginBottom:32,padding:'8px 0',fontFamily:sans }}>← Back</button>
