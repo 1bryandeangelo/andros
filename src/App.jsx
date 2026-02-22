@@ -1688,9 +1688,229 @@ function Scorecard({ tScore, streak, moodLog, sleepLog, todayCheckins, onClose, 
 // ============================================================
 // LANDING PAGE
 // ============================================================
+// ============================================================
+// TESTOSTERONE QUIZ
+// ============================================================
+const QUIZ_QUESTIONS = [
+  {
+    q: 'How many hours do you typically sleep?',
+    icon: '🌙',
+    opts: [
+      { label: 'Less than 5 hours', pts: 0 },
+      { label: '5–6 hours', pts: 5 },
+      { label: '6–7 hours', pts: 12 },
+      { label: '7–9 hours', pts: 20 },
+    ]
+  },
+  {
+    q: 'How often do you do resistance training?',
+    icon: '🏋️',
+    opts: [
+      { label: 'Never', pts: 0 },
+      { label: '1–2 times per week', pts: 8 },
+      { label: '3–4 times per week', pts: 16 },
+      { label: '5+ times per week', pts: 20 },
+    ]
+  },
+  {
+    q: 'How would you describe your diet?',
+    icon: '🥑',
+    opts: [
+      { label: 'Mostly fast food / processed', pts: 0 },
+      { label: 'Mixed — some healthy, some not', pts: 6 },
+      { label: 'Pretty clean — whole foods mostly', pts: 14 },
+      { label: 'Dialed in — high protein, healthy fats, no seed oils', pts: 20 },
+    ]
+  },
+  {
+    q: 'How much alcohol do you drink per week?',
+    icon: '🚫',
+    opts: [
+      { label: 'Daily', pts: 0 },
+      { label: '3–5 drinks per week', pts: 6 },
+      { label: '1–2 drinks per week', pts: 14 },
+      { label: 'None', pts: 20 },
+    ]
+  },
+  {
+    q: 'Do you get morning sunlight or take Vitamin D?',
+    icon: '☀️',
+    opts: [
+      { label: 'No, neither', pts: 0 },
+      { label: 'Sometimes', pts: 5 },
+      { label: 'Vitamin D supplement daily', pts: 12 },
+      { label: 'Both — morning sun + supplement', pts: 20 },
+    ]
+  },
+  {
+    q: 'How would you rate your stress levels?',
+    icon: '🧘',
+    opts: [
+      { label: 'Constantly overwhelmed', pts: 0 },
+      { label: 'Pretty stressed most days', pts: 4 },
+      { label: 'Manageable — some good, some bad', pts: 10 },
+      { label: 'Low — I actively manage stress', pts: 16 },
+    ]
+  },
+];
+
+function TQuiz({ onComplete, onClose }) {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState([]);
+  const [showResult, setShowResult] = useState(false);
+  const [animScore, setAnimScore] = useState(0);
+  const heading = { fontFamily: "'Cormorant Garamond', Georgia, serif" };
+  const body = { fontFamily: "'DM Sans', -apple-system, sans-serif" };
+
+  const totalPossible = QUIZ_QUESTIONS.reduce((s, q) => s + Math.max(...q.opts.map(o => o.pts)), 0);
+
+  const handleAnswer = (pts) => {
+    const newAnswers = [...answers, pts];
+    setAnswers(newAnswers);
+    if (step < QUIZ_QUESTIONS.length - 1) {
+      setTimeout(() => setStep(step + 1), 200);
+    } else {
+      setTimeout(() => setShowResult(true), 300);
+      // Animate score count-up
+      const raw = newAnswers.reduce((a, b) => a + b, 0);
+      const score = Math.round((raw / totalPossible) * 100);
+      let current = 0;
+      const interval = setInterval(() => {
+        current += 2;
+        if (current >= score) { current = score; clearInterval(interval); }
+        setAnimScore(current);
+      }, 20);
+    }
+  };
+
+  const totalScore = Math.round((answers.reduce((a, b) => a + b, 0) / totalPossible) * 100);
+  const getLabel = (s) => s >= 85 ? 'Excellent' : s >= 70 ? 'Good' : s >= 50 ? 'Moderate' : s >= 30 ? 'Needs Work' : 'Critical';
+  const getRingColor = (s) => s >= 85 ? '#4ade80' : s >= 70 ? '#d4a44a' : s >= 50 ? '#e8a534' : '#c45c5c';
+
+  // Per-category feedback
+  const getFeedback = () => {
+    const fb = [];
+    const labels = ['Sleep', 'Training', 'Nutrition', 'Alcohol', 'Sunlight & Vitamin D', 'Stress'];
+    const maxPts = QUIZ_QUESTIONS.map(q => Math.max(...q.opts.map(o => o.pts)));
+    answers.forEach((pts, i) => {
+      const pct = maxPts[i] > 0 ? pts / maxPts[i] : 0;
+      if (pct <= 0.3) fb.push({ label: labels[i], icon: QUIZ_QUESTIONS[i].icon, msg: 'Needs attention', color: '#c45c5c' });
+      else if (pct <= 0.6) fb.push({ label: labels[i], icon: QUIZ_QUESTIONS[i].icon, msg: 'Room to improve', color: '#e8a534' });
+      else fb.push({ label: labels[i], icon: QUIZ_QUESTIONS[i].icon, msg: 'Looking good', color: '#4ade80' });
+    });
+    return fb;
+  };
+
+  if (showResult) {
+    const fb = getFeedback();
+    const ringColor = getRingColor(totalScore);
+    const circumference = 2 * Math.PI * 54;
+    const strokeDash = (animScore / 100) * circumference;
+
+    return <div style={{ position:'fixed',inset:0,background:c.bg,zIndex:2000,overflowY:'auto',display:'flex',flexDirection:'column',alignItems:'center' }}>
+      <div style={{ width:'100%',maxWidth:440,padding:'40px 24px' }}>
+        {/* Close */}
+        <button onClick={onClose} style={{ position:'absolute',top:16,right:20,background:'none',border:'none',color:c.textMuted,fontSize:18,cursor:'pointer' }}>✕</button>
+
+        <div style={{ textAlign:'center',marginBottom:32 }}>
+          <div style={{ ...body,fontSize:10,fontWeight:700,letterSpacing:4,textTransform:'uppercase',color:c.accent,marginBottom:16 }}>Your Results</div>
+          <h2 style={{ ...heading,fontSize:28,fontWeight:400,color:c.text,marginBottom:8 }}>Testosterone Optimization Score</h2>
+        </div>
+
+        {/* Score Ring */}
+        <div style={{ position:'relative',width:140,height:140,margin:'0 auto 32px' }}>
+          <svg width="140" height="140" style={{ transform:'rotate(-90deg)' }}>
+            <circle cx="70" cy="70" r="54" fill="none" stroke={c.bgElevated} strokeWidth="8" />
+            <circle cx="70" cy="70" r="54" fill="none" stroke={ringColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference - strokeDash} style={{ transition:'stroke-dashoffset 1s ease' }} />
+          </svg>
+          <div style={{ position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center' }}>
+            <div style={{ fontSize:42,fontWeight:700,...heading,color:c.text }}>{animScore}</div>
+            <div style={{ fontSize:12,color:ringColor,fontWeight:600,...body }}>{getLabel(totalScore)}</div>
+          </div>
+        </div>
+
+        {/* Category Breakdown */}
+        <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:16,padding:20,marginBottom:24 }}>
+          <div style={{ ...body,fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:14 }}>Your Breakdown</div>
+          {fb.map((f, i) => <div key={i} style={{ display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:i < fb.length - 1 ? `1px solid ${c.border}` : 'none' }}>
+            <span style={{ fontSize:18 }}>{f.icon}</span>
+            <span style={{ flex:1,fontSize:13,fontWeight:500,color:c.text,...body }}>{f.label}</span>
+            <span style={{ fontSize:11,fontWeight:600,color:f.color,...body }}>{f.msg}</span>
+          </div>)}
+        </div>
+
+        {/* CTA */}
+        <div style={{ textAlign:'center' }}>
+          <p style={{ fontSize:14,color:c.textSec,lineHeight:1.6,marginBottom:24,...body }}>
+            {totalScore >= 70 ? "You're doing well — but tracking daily can help you stay consistent and find your weak spots." 
+            : totalScore >= 40 ? "You have real room to improve. Tracking these habits daily can help you see what actually moves the needle."
+            : "Your testosterone is likely being held back by your current habits. The good news — small daily changes can make a big difference."}
+          </p>
+          <button onClick={onComplete} style={{ width:'100%',padding:16,background:`linear-gradient(135deg,${c.accent},${c.accentBright})`,color:c.bg,...body,fontSize:14,fontWeight:700,letterSpacing:1,textTransform:'uppercase',borderRadius:10,border:'none',cursor:'pointer',boxShadow:'0 4px 24px rgba(212,164,74,0.25)',marginBottom:10 }}>Start Tracking — It's Free</button>
+          <p style={{ fontSize:11,color:c.textMuted,...body }}>No download required · Free forever</p>
+        </div>
+      </div>
+    </div>;
+  }
+
+  const question = QUIZ_QUESTIONS[step];
+  const progress = ((step) / QUIZ_QUESTIONS.length) * 100;
+
+  return <div style={{ position:'fixed',inset:0,background:c.bg,zIndex:2000,overflowY:'auto',display:'flex',flexDirection:'column',alignItems:'center' }}>
+    <div style={{ width:'100%',maxWidth:440,padding:'40px 24px',flex:1,display:'flex',flexDirection:'column' }}>
+      {/* Header */}
+      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:32 }}>
+        <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+          <span style={{ color:c.accent,...heading,fontWeight:700,fontSize:16 }}>+</span>
+          <span style={{ ...body,fontSize:9,fontWeight:700,letterSpacing:3,textTransform:'uppercase',color:c.text }}>Andros</span>
+        </div>
+        <button onClick={onClose} style={{ background:'none',border:'none',color:c.textMuted,fontSize:14,cursor:'pointer',...body }}>✕</button>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height:3,background:c.bgElevated,borderRadius:2,marginBottom:40,overflow:'hidden' }}>
+        <div style={{ height:'100%',width:progress+'%',background:c.accent,borderRadius:2,transition:'width 0.4s ease' }} />
+      </div>
+
+      {/* Question */}
+      <div style={{ flex:1,display:'flex',flexDirection:'column',justifyContent:'center' }}>
+        <div style={{ textAlign:'center',marginBottom:8 }}>
+          <span style={{ fontSize:36 }}>{question.icon}</span>
+        </div>
+        <div style={{ ...body,fontSize:11,color:c.textMuted,textAlign:'center',marginBottom:8,fontWeight:600,letterSpacing:2,textTransform:'uppercase' }}>Question {step + 1} of {QUIZ_QUESTIONS.length}</div>
+        <h2 style={{ ...heading,fontSize:24,fontWeight:400,color:c.text,textAlign:'center',lineHeight:1.3,marginBottom:32 }}>{question.q}</h2>
+
+        <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+          {question.opts.map((opt, i) => <button key={i} onClick={() => handleAnswer(opt.pts)} style={{
+            padding:'16px 20px',
+            background:c.bgCard,
+            border:`1px solid ${c.border}`,
+            borderRadius:12,
+            color:c.text,
+            fontSize:14,
+            ...body,
+            cursor:'pointer',
+            textAlign:'left',
+            transition:'all 0.2s',
+          }}
+          onMouseOver={e => { e.target.style.borderColor = c.accent + '60'; e.target.style.background = c.bgElevated; }}
+          onMouseOut={e => { e.target.style.borderColor = c.border; e.target.style.background = c.bgCard; }}
+          >{opt.label}</button>)}
+        </div>
+      </div>
+
+      {/* Step indicator dots */}
+      <div style={{ display:'flex',justifyContent:'center',gap:6,marginTop:32,paddingBottom:20 }}>
+        {QUIZ_QUESTIONS.map((_, i) => <div key={i} style={{ width:8,height:8,borderRadius:4,background:i < step ? c.accent : i === step ? c.accent + '80' : c.bgElevated,transition:'all 0.3s' }} />)}
+      </div>
+    </div>
+  </div>;
+}
+
 function LandingPage({ onGetStarted, onLogin }) {
   const [visible, setVisible] = useState(new Set());
   const revealRef = useRef([]);
+  const [showQuiz, setShowQuiz] = useState(false);
 
   useEffect(() => {
     const obs = new IntersectionObserver((entries) => {
@@ -1748,7 +1968,8 @@ function LandingPage({ onGetStarted, onLogin }) {
       <div style={{ fontSize:11,fontWeight:600,letterSpacing:4,textTransform:'uppercase',color:c.accent,marginBottom:24,...body,opacity:0,animation:'landFadeUp 0.8s ease forwards 0.2s' }}>Testosterone Optimization</div>
       <h1 style={{ ...heading,fontSize:'clamp(42px,8vw,72px)',fontWeight:400,lineHeight:1.05,color:c.text,marginBottom:8,opacity:0,animation:'landFadeUp 0.8s ease forwards 0.4s' }}>Optimize your T.<br/><em style={{ fontStyle:'italic',color:c.accent }}>Naturally.</em></h1>
       <p style={{ ...body,fontSize:17,color:c.textSec,maxWidth:440,lineHeight:1.6,margin:'20px auto 40px',opacity:0,animation:'landFadeUp 0.8s ease forwards 0.6s' }}>11 science-backed daily habits. Track your score. See what's actually moving the needle.</p>
-      <button onClick={onGetStarted} style={{ display:'inline-flex',alignItems:'center',gap:10,padding:'16px 40px',background:`linear-gradient(135deg,${c.accent},${c.accentBright})`,color:c.bg,...body,fontSize:14,fontWeight:700,letterSpacing:1,textTransform:'uppercase',borderRadius:10,border:'none',cursor:'pointer',boxShadow:'0 4px 24px rgba(212,164,74,0.25)',opacity:0,animation:'landFadeUp 0.8s ease forwards 0.8s' }}>Start Free — No Download</button>
+      <button onClick={()=>setShowQuiz(true)} style={{ display:'inline-flex',alignItems:'center',gap:10,padding:'16px 40px',background:`linear-gradient(135deg,${c.accent},${c.accentBright})`,color:c.bg,...body,fontSize:14,fontWeight:700,letterSpacing:1,textTransform:'uppercase',borderRadius:10,border:'none',cursor:'pointer',boxShadow:'0 4px 24px rgba(212,164,74,0.25)',opacity:0,animation:'landFadeUp 0.8s ease forwards 0.8s' }}>Take the Quiz</button>
+      <button onClick={onGetStarted} style={{ display:'inline-flex',alignItems:'center',gap:10,padding:'12px 28px',background:'transparent',border:`1px solid ${c.border}`,color:c.textSec,...body,fontSize:12,fontWeight:600,letterSpacing:0.5,borderRadius:8,cursor:'pointer',marginTop:12,opacity:0,animation:'landFadeUp 0.8s ease forwards 0.9s' }}>or skip to signup →</button>
       <p style={{ fontSize:12,color:c.textMuted,marginTop:14,opacity:0,animation:'landFadeUp 0.8s ease forwards 1s' }}>Free forever · Premium analytics $8.99/mo</p>
       <div style={{ marginTop:60,opacity:0,animation:'landFadeUp 1s ease forwards 1.1s' }}>
         <img src="/screenshots/scorecard.jpg" alt="Andros T-Score" style={{ width:260,borderRadius:24,border:`1px solid ${c.border}`,boxShadow:'0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(212,164,74,0.08)' }} />
@@ -1863,6 +2084,9 @@ function LandingPage({ onGetStarted, onLogin }) {
         .land-feature-grid { grid-template-columns: 1fr !important; }
       }
     `}</style>
+
+    {/* Quiz overlay */}
+    {showQuiz && <TQuiz onComplete={onGetStarted} onClose={()=>setShowQuiz(false)} />}
   </div>;
 }
 
