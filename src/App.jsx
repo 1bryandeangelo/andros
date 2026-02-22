@@ -466,19 +466,19 @@ function getScoreLabel(score) {
 }
 
 const PROTOCOLS = [
-  { id: 'beginner', title: 'The Foundation Protocol', subtitle: '30 days to build your base', tier: 'free', level: 'Beginner', duration: '30 days', icon: '🌱', overview: 'Designed for men just starting their optimization journey. No extreme measures — just the foundational habits that make the biggest impact.', sections: [
+  { id: 'beginner', title: 'The Foundation Protocol', subtitle: '30 days to build your base', tier: 'free', level: 'Beginner', duration: '30 days', icon: 'layers', overview: 'Designed for men just starting their optimization journey. No extreme measures — just the foundational habits that make the biggest impact.', sections: [
     { title: 'Week 1-2: Sleep & Sunlight', content: 'Fix your sleep first. This alone can raise T levels 10-15%.', habits: ['15 min sunlight within 1 hour of waking', 'Consistent bedtime alarm', 'No caffeine after 2pm', 'No screens 60 min before bed'], scienceNote: 'Men who slept 5 hours had 10-15% lower T than when sleeping 8 hours (U of Chicago).' },
     { title: 'Week 2-3: Nutrition', content: 'Give your body the raw materials for testosterone production.', habits: ['3-4 whole eggs daily', 'One zinc-rich food daily', 'Replace seed oils with olive oil/butter', '0.8g protein per pound bodyweight'], scienceNote: 'Men switching from high-fat to low-fat diet saw significant T decrease (J Steroid Biochemistry).' },
     { title: 'Week 3-4: Movement & Stress', content: 'Reduce cortisol and introduce resistance training.', habits: ['30+ min walk daily', '2-3 resistance training sessions/week', '10 min breathwork daily', 'Reduce one major stressor this week'], scienceNote: 'Single resistance training sessions produce significant acute T increases.' },
     { title: 'Week 4+: Lock In', content: 'Lock in habits permanently and prepare for intermediate protocol.', habits: ['Hit 5+ habits daily', '7+ day streak', 'Log mood daily', 'Review stats every Sunday'], scienceNote: 'It takes ~66 days for a behavior to become automatic (UCL research).' }
   ], keyTakeaways: ['Sleep is #1', 'Eat real food with adequate fat', 'Morning sunlight for circadian rhythm', 'Aim for 5+ habits daily', 'Track everything'] },
-  { id: 'intermediate', title: 'The Optimization Protocol', subtitle: 'Dial in for maximum output', tier: 'premium', level: 'Intermediate', duration: '60 days', icon: '⚡', overview: 'Advanced strategies — cold exposure, targeted supplementation, training periodization, and environmental optimization.', sections: [
+  { id: 'intermediate', title: 'The Optimization Protocol', subtitle: 'Dial in for maximum output', tier: 'premium', level: 'Intermediate', duration: '60 days', icon: 'zap', overview: 'Advanced strategies — cold exposure, targeted supplementation, training periodization, and environmental optimization.', sections: [
     { title: 'Phase 1: Cold & Heat', content: 'Cold exposure activates the sympathetic nervous system.', habits: ['Build to 2+ min cold showers', '1-2 sauna sessions/week', 'Controlled breathing during cold', 'Track cold tolerance'], scienceNote: 'Cold immersion shows 200-300% increase in norepinephrine.' },
     { title: 'Phase 2: Supplements', content: 'Evidence-based supplements to fill nutritional gaps.', habits: ['Vitamin D3: 4-5k IU daily with K2', 'Zinc: 30mg daily', 'Magnesium Glycinate: 400mg before bed', 'Ashwagandha KSM-66: 600mg daily'], scienceNote: 'Ashwagandha showed 14.7% greater T increase vs placebo (Am J Men\'s Health 2019).' },
     { title: 'Phase 3: Training', content: 'Maximize hormonal response through training optimization.', habits: ['4x/week: 2 heavy, 2 moderate', 'Compound lifts priority', 'Sessions under 60 min', '8+ hours sleep on training days'], scienceNote: 'Sessions over 60 min significantly increase cortisol, blunting T response.' },
     { title: 'Phase 4: Environment', content: 'Audit your environment for endocrine disruptors.', habits: ['Glass containers instead of plastic', 'Filter drinking water', 'Face-to-face social interaction', 'Audit personal care products'], scienceNote: 'Higher BPA = significantly lower testosterone (Fertility & Sterility 2014).' }
   ], keyTakeaways: ['Cold exposure is free and powerful', 'Supplement to fill gaps', 'Train heavy, under 60 min', 'Reduce endocrine disruptors', 'Recovery is key'] },
-  { id: 'advanced', title: 'The Elite Protocol', subtitle: 'Peak performance', tier: 'premium', level: 'Advanced', duration: '90 days', icon: '👑', overview: 'Advanced fasting, periodized training, blood work tracking, and mental performance optimization.', sections: [
+  { id: 'advanced', title: 'The Elite Protocol', subtitle: 'Peak performance', tier: 'premium', level: 'Advanced', duration: '90 days', icon: 'chart', overview: 'Advanced fasting, periodized training, blood work tracking, and mental performance optimization.', sections: [
     { title: 'Phase 1: Metabolic Flexibility', content: 'Strategic fasting for hormonal optimization.', habits: ['16:8 intermittent fasting', 'Two 24-hour fasts/month', 'Carb cycling: high on training days', 'Track fasting and energy'], scienceNote: 'IF increased growth hormone secretion by up to 2000% during fasting.' },
     { title: 'Phase 2: Periodization', content: 'Vary intensity and volume for maximum hormonal response.', habits: ['Week 1-2: Heavy (4x5 @ 85-90%)', 'Week 3: Volume (4x10-12 @ 65-75%)', 'Week 4: Deload (3x8 @ 50-60%)', '2 sprint sessions/week'], scienceNote: '6 weeks of sprint training increased T by 17% (J Strength Cond Research).' },
     { title: 'Phase 3: Blood Work', content: 'Measure to optimize with data.', habits: ['Full panel: Total T, Free T, SHBG, Estradiol, Cortisol', 'Test 7-9am fasted', 'Retest every 90 days', 'Log results with protocol notes'], scienceNote: 'T varies 30-40% through the day. Free T and SHBG tell the full story.' },
@@ -1226,87 +1226,632 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
 function ProtocolDetail({ protocol, onBack, isPremium, onUpgrade }) {
   const locked = protocol.tier==='premium'&&!isPremium;
   const [exp,setExp] = useState(0);
-  if (locked) return <div><button onClick={onBack} style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'none',color:c.textSec,cursor:'pointer',fontSize:13,marginBottom:24,padding:'8px 0',fontFamily:sans }}>← Back</button><div style={{ textAlign:'center',padding:'32px 16px' }}><div style={{ fontSize:52,marginBottom:14 }}>{protocol.icon}</div><h2 style={{ fontSize:22,fontWeight:400,marginBottom:8,color:c.text,fontFamily:serif }}>{protocol.title}</h2><p style={{ color:c.textSec,fontSize:14,marginBottom:24,fontFamily:sans }}>{protocol.overview}</p><div style={{ background:c.bgCard,border:`1px solid ${c.accent}40`,borderRadius:12,padding:28 }}><div style={{ fontSize:28,marginBottom:10,color:c.textMuted }}>🔒</div><h3 style={{ fontSize:16,fontWeight:700,marginBottom:8,color:c.text,fontFamily:sans }}>Premium Protocol</h3><button onClick={onUpgrade} style={{ cursor:'pointer',background:c.accent,border:'none',color:c.bg,fontWeight:700,fontSize:14,padding:'13px 26px',borderRadius:10,fontFamily:sans }}>Unlock — $8.99/mo</button></div></div></div>;
+  if (locked) return <div><button onClick={onBack} style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'none',color:c.textSec,cursor:'pointer',fontSize:13,marginBottom:24,padding:'8px 0',fontFamily:sans }}>← Back</button><div style={{ textAlign:'center',padding:'32px 16px' }}><div style={{ marginBottom:14,display:'flex',justifyContent:'center' }}><div style={{ width:56,height:56,borderRadius:14,background:c.bgElevated,border:`1px solid ${c.borderLight}`,display:'flex',alignItems:'center',justifyContent:'center' }}><LearnIcon type={protocol.icon} size={28} color={c.accent} /></div></div><h2 style={{ fontSize:22,fontWeight:400,marginBottom:8,color:c.text,fontFamily:serif }}>{protocol.title}</h2><p style={{ color:c.textSec,fontSize:14,marginBottom:24,fontFamily:sans }}>{protocol.overview}</p><div style={{ background:c.bgCard,border:`1px solid ${c.accent}40`,borderRadius:12,padding:28 }}><div style={{ marginBottom:10,display:'flex',justifyContent:'center' }}><LearnIcon type="lock" size={24} color={c.textMuted} /></div><h3 style={{ fontSize:16,fontWeight:700,marginBottom:8,color:c.text,fontFamily:sans }}>Premium Protocol</h3><button onClick={onUpgrade} style={{ cursor:'pointer',background:c.accent,border:'none',color:c.bg,fontWeight:700,fontSize:14,padding:'13px 26px',borderRadius:10,fontFamily:sans }}>Unlock — $8.99/mo</button></div></div></div>;
   return <div><button onClick={onBack} style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'none',color:c.textSec,cursor:'pointer',fontSize:13,marginBottom:24,padding:'8px 0',fontFamily:sans }}>← Back</button>
-    <div style={{ textAlign:'center',marginBottom:28 }}><div style={{ fontSize:48,marginBottom:10 }}>{protocol.icon}</div><h2 style={{ fontSize:22,fontWeight:400,marginBottom:6,color:c.text,fontFamily:serif }}>{protocol.title}</h2><div style={{ display:'inline-flex',gap:8,marginTop:8 }}><span style={{ background:c.bgElevated,borderRadius:14,padding:'4px 12px',fontSize:11,color:c.textSec,fontFamily:sans }}>{protocol.level}</span><span style={{ background:c.bgElevated,borderRadius:14,padding:'4px 12px',fontSize:11,color:c.textSec,fontFamily:sans }}>{protocol.duration}</span></div></div>
+    <div style={{ textAlign:'center',marginBottom:28 }}><div style={{ marginBottom:10,display:'flex',justifyContent:'center' }}><div style={{ width:52,height:52,borderRadius:12,background:c.bgElevated,border:`1px solid ${c.borderLight}`,display:'flex',alignItems:'center',justifyContent:'center' }}><LearnIcon type={protocol.icon} size={26} color={c.accent} /></div></div><h2 style={{ fontSize:22,fontWeight:400,marginBottom:6,color:c.text,fontFamily:serif }}>{protocol.title}</h2><div style={{ display:'inline-flex',gap:8,marginTop:8 }}><span style={{ background:c.bgElevated,borderRadius:14,padding:'4px 12px',fontSize:11,color:c.textSec,fontFamily:sans }}>{protocol.level}</span><span style={{ background:c.bgElevated,borderRadius:14,padding:'4px 12px',fontSize:11,color:c.textSec,fontFamily:sans }}>{protocol.duration}</span></div></div>
     <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:16 }}><div style={{ fontSize:10,textTransform:'uppercase',letterSpacing:2,color:c.accent,fontWeight:600,marginBottom:8,fontFamily:sans }}>Overview</div><p style={{ fontSize:14,lineHeight:1.7,color:c.textSec,fontFamily:sans }}>{protocol.overview}</p></div>
     {protocol.sections.map((sec,idx)=><div key={idx} style={{ background:c.bgCard,border:`1px solid ${exp===idx?c.accent+'40':c.border}`,borderRadius:12,marginBottom:10,overflow:'hidden',transition:'border-color 0.2s' }}>
       <button onClick={()=>setExp(exp===idx?-1:idx)} style={{ width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 18px',background:'none',border:'none',cursor:'pointer',textAlign:'left' }}><div><div style={{ fontSize:10,color:c.textMuted,marginBottom:3,fontFamily:sans }}>Phase {idx+1}</div><div style={{ fontSize:14,fontWeight:600,color:c.text,fontFamily:sans }}>{sec.title}</div></div><span style={{ color:c.textMuted,fontSize:16,transform:exp===idx?'rotate(90deg)':'rotate(0)',transition:'transform 0.2s' }}>›</span></button>
-      {exp===idx&&<div style={{ padding:'0 18px 18px' }}><p style={{ fontSize:13,lineHeight:1.7,color:c.textSec,marginBottom:18,fontFamily:sans }}>{sec.content}</p><div style={{ marginBottom:18 }}><div style={{ fontSize:10,textTransform:'uppercase',letterSpacing:2,color:c.accent,fontWeight:600,marginBottom:10,fontFamily:sans }}>Daily Actions</div>{sec.habits.map((h,hi)=><div key={hi} style={{ display:'flex',alignItems:'flex-start',gap:8,marginBottom:8 }}><span style={{ color:c.accent,fontSize:14,fontWeight:300,marginTop:1,flexShrink:0 }}>+</span><span style={{ fontSize:13,lineHeight:1.5,color:c.text,fontFamily:sans }}>{h}</span></div>)}</div><div style={{ background:c.bgElevated,borderRadius:8,padding:14,borderLeft:`2px solid ${c.accent}` }}><div style={{ fontSize:10,textTransform:'uppercase',letterSpacing:1,color:c.accent,fontWeight:600,marginBottom:6,fontFamily:sans }}>🔬 The Science</div><p style={{ fontSize:12,lineHeight:1.7,color:c.textSec,fontFamily:sans }}>{sec.scienceNote}</p></div></div>}
+      {exp===idx&&<div style={{ padding:'0 18px 18px' }}><p style={{ fontSize:13,lineHeight:1.7,color:c.textSec,marginBottom:18,fontFamily:sans }}>{sec.content}</p><div style={{ marginBottom:18 }}><div style={{ fontSize:10,textTransform:'uppercase',letterSpacing:2,color:c.accent,fontWeight:600,marginBottom:10,fontFamily:sans }}>Daily Actions</div>{sec.habits.map((h,hi)=><div key={hi} style={{ display:'flex',alignItems:'flex-start',gap:8,marginBottom:8 }}><span style={{ color:c.accent,fontSize:14,fontWeight:300,marginTop:1,flexShrink:0 }}>+</span><span style={{ fontSize:13,lineHeight:1.5,color:c.text,fontFamily:sans }}>{h}</span></div>)}</div><div style={{ background:c.bgElevated,borderRadius:8,padding:14,borderLeft:`2px solid ${c.accent}` }}><div style={{ fontSize:10,textTransform:'uppercase',letterSpacing:1,color:c.accent,fontWeight:600,marginBottom:6,fontFamily:sans }}>The Science</div><p style={{ fontSize:12,lineHeight:1.7,color:c.textSec,fontFamily:sans }}>{sec.scienceNote}</p></div></div>}
     </div>)}
     <div style={{ background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginTop:16 }}><div style={{ fontSize:10,textTransform:'uppercase',letterSpacing:2,color:c.accent,fontWeight:600,marginBottom:12,fontFamily:sans }}>Key Takeaways</div>{protocol.keyTakeaways.map((t,i)=><div key={i} style={{ display:'flex',alignItems:'flex-start',gap:8,marginBottom:8 }}><span style={{ color:c.accent,fontWeight:700,flexShrink:0,fontSize:13 }}>✓</span><span style={{ fontSize:13,lineHeight:1.5,color:c.text,fontFamily:sans }}>{t}</span></div>)}</div>
   </div>;
 }
 
-const T_EDUCATION = [
-  { id: 'what', title: 'What Is Testosterone?', content: 'Testosterone is the primary male sex hormone and anabolic steroid. It plays a key role in muscle mass, bone density, body hair, red blood cell production, mood regulation, and sex drive. Women also produce testosterone in smaller amounts. It\'s made primarily in the Leydig cells of the testes, with small amounts from the adrenal glands.', icon: '🧬' },
-  { id: 'how', title: 'How Your Body Makes It', content: 'It starts in the brain. Your hypothalamus releases GnRH (gonadotropin-releasing hormone), which signals the pituitary gland to release LH (luteinizing hormone) and FSH. LH travels to the testes and tells the Leydig cells to convert cholesterol into testosterone. This is why dietary fat, sleep, and stress management are critical — they directly affect this signaling chain. Cholesterol → pregnenolone → DHEA → androstenedione → testosterone.', icon: '⚙️' },
-  { id: 'does', title: 'What Testosterone Does', content: 'Builds and maintains muscle mass and strength. Regulates fat distribution (less belly fat at healthy levels). Drives libido and sexual function. Supports bone mineral density. Produces red blood cells (energy, endurance). Influences mood, confidence, motivation, and cognitive sharpness. Supports sperm production and fertility.', icon: '⚡' },
-  { id: 'doesnt', title: 'What It Doesn\'t Do', content: 'Testosterone alone doesn\'t make you aggressive — that\'s largely a myth. It doesn\'t guarantee muscle growth without exercise. It\'s not a personality trait. Having high T doesn\'t automatically mean better health if other markers are off. And it\'s only one piece of the hormonal puzzle — cortisol, estrogen, SHBG, thyroid hormones, and insulin all interact with testosterone.', icon: '🚫' },
-  { id: 'low', title: 'Signs of Low Testosterone', content: 'Persistent fatigue even with adequate sleep. Reduced sex drive or erectile difficulty. Loss of muscle mass or difficulty building muscle. Increased body fat, especially around the midsection. Brain fog, poor concentration, memory issues. Mood changes — irritability, low motivation, depression. Decreased bone density. Sleep disturbances. Reduced facial and body hair growth over time.', icon: '📉' },
-  { id: 'high', title: 'Too Much Testosterone', content: 'Excess testosterone (usually from external sources) can convert to estrogen via aromatase, causing gynecomastia. It can increase red blood cell count to dangerous levels (polycythemia). Other risks include acne, hair loss, mood swings, aggression, sleep apnea, reduced sperm count, and testicular shrinkage. This is why Andros focuses on natural optimization — your body has feedback loops that prevent overproduction.', icon: '📈' },
+
+// LEARN TAB - Complete content library for Andros
+// This gets injected into App.jsx replacing old ProtocolsView, T_EDUCATION, SOURCES
+
+// ============================================================
+// SVG ICON SYSTEM (replaces emojis)
+// ============================================================
+const LearnIcon = ({ type, size = 20, color = '#d4a44a' }) => {
+  const icons = {
+    moon: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>,
+    dumbbell: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M6.5 6.5h11M6.5 17.5h11M3 10v4M6 8v8M18 8v8M21 10v4M6 6.5V8M6 16v1.5M18 6.5V8M18 16v1.5M3 10h3M3 14h3M18 10h3M18 14h3"/></svg>,
+    nutrition: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M12 2a7 7 0 00-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 00-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>,
+    sun: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
+    brain: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M12 2C9 2 7 4 7 6.5c0 .5.1 1 .2 1.5C5.3 8.7 4 10.5 4 12.5c0 1.6.8 3 2 3.9-.1.4-.2.7-.2 1.1 0 2.5 2 4.5 4.5 4.5.8 0 1.2-.1 1.7-.3M12 2c3 0 5 2 5 4.5 0 .5-.1 1-.2 1.5 1.9.7 3.2 2.5 3.2 4.5 0 1.6-.8 3-2 3.9.1.4.2.7.2 1.1 0 2.5-2 4.5-4.5 4.5-.8 0-1.2-.1-1.7-.3"/><path d="M12 2v20"/></svg>,
+    snowflake: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/><path d="M12 6l-2-2M12 6l2-2M12 18l-2 2M12 18l2 2M6 12l-2-2M6 12l-2 2M18 12l2-2M18 12l2 2"/></svg>,
+    shield: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+    pill: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M10.5 1.5l-8 8a5.66 5.66 0 008 8l8-8a5.66 5.66 0 00-8-8z"/><path d="M6 14l8-8"/></svg>,
+    ban: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>,
+    walk: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><circle cx="14" cy="4" r="2"/><path d="M10 22l3-8M6 13l4-2 3 5 4-5M15 22l-2-7"/></svg>,
+    book: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>,
+    beaker: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M9 3h6M10 3v6.5L4 21h16l-6-11.5V3"/></svg>,
+    chart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M3 3v18h18"/><path d="M7 16l4-5 4 3 5-6"/></svg>,
+    heart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,
+    zap: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
+    clock: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+    lock: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
+    arrow: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>,
+    dna: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M7 2v2M17 2v2M7 20v2M17 20v2M2 7h4M18 7h4M2 17h4M18 17h4"/><path d="M7 4a10 10 0 0010 0"/><path d="M7 20a10 10 0 0110 0"/><path d="M7 4v16M17 4v16"/></svg>,
+    warning: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>,
+    layers: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>,
+  };
+  return icons[type] || icons.book;
+};
+
+// ============================================================
+// ARTICLE CONTENT — HABIT ARTICLES
+// ============================================================
+const HABIT_ARTICLES = [
+  {
+    id: 'sleep',
+    title: 'Sleep & Testosterone',
+    subtitle: 'The single most important factor',
+    icon: 'moon',
+    category: 'big3',
+    readTime: '8 min',
+    content: [
+      { type: 'p', text: 'Sleep is the foundation of testosterone production. The majority of daily testosterone release occurs during sleep, specifically during REM and deep sleep phases. Disrupting sleep even modestly has outsized effects on hormonal health.' },
+      { type: 'h', text: 'What the Research Shows' },
+      { type: 'p', text: 'A landmark 2011 study at the University of Chicago found that men who slept only 5 hours per night for one week experienced a 10–15% reduction in daytime testosterone levels. To put that in context, normal aging decreases testosterone by 1–2% per year — meaning one week of poor sleep aged these men hormonally by 5 to 15 years.' },
+      { type: 'cite', text: 'Leproult & Van Cauter, "Effect of 1 Week of Sleep Restriction on Testosterone Levels in Young Healthy Men," JAMA, 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21632481/' },
+      { type: 'h', text: 'Why Deep Sleep Matters Most' },
+      { type: 'p', text: 'Testosterone secretion follows a pulsatile pattern during sleep, with the largest pulses occurring during the first bout of REM sleep. Deep sleep (stages 3–4) is when growth hormone peaks, which works synergistically with testosterone for muscle repair and recovery. Without adequate deep sleep, both hormones are suppressed.' },
+      { type: 'h', text: 'How to Optimize Sleep for Testosterone' },
+      { type: 'list', items: [
+        'Consistent schedule — Go to bed and wake at the same time daily, including weekends. Your circadian rhythm drives hormonal release timing.',
+        'Temperature — Keep your bedroom at 65–68°F (18–20°C). Core body temperature must drop for deep sleep initiation.',
+        'Light discipline — Avoid blue light 60–90 minutes before bed. Use blackout curtains. Even small amounts of ambient light suppress melatonin.',
+        'Caffeine cutoff — Caffeine has a half-life of 5–6 hours. A 2pm coffee still has 50% of its caffeine active at 8pm. Cut caffeine by noon.',
+        'Alcohol avoidance — Alcohol fragments sleep architecture, dramatically reducing REM sleep. Even two drinks in the evening can reduce testosterone by 6.8% overnight.',
+        'Magnesium — 300–400mg of magnesium glycinate before bed improves sleep quality and duration. Magnesium deficiency is linked to lower testosterone.',
+      ]},
+      { type: 'h', text: 'REM Sleep Optimization' },
+      { type: 'p', text: 'REM sleep typically occurs in longer bouts during the second half of the night. If you cut sleep short, you disproportionately lose REM time. Strategies to increase REM specifically include maintaining consistent sleep schedules, avoiding alcohol (which suppresses REM), keeping the room cool, and ensuring you get a full 7–9 hours so the later REM-heavy cycles can complete.' },
+      { type: 'stat', label: '10–15%', desc: 'testosterone reduction from just one week of 5-hour sleep' },
+    ]
+  },
+  {
+    id: 'training',
+    title: 'Resistance Training & T',
+    subtitle: 'The right way to train for hormones',
+    icon: 'dumbbell',
+    category: 'big3',
+    readTime: '9 min',
+    content: [
+      { type: 'p', text: 'Resistance training is one of the most reliable ways to acutely boost testosterone and elevate baseline levels over time. But not all exercise is equal — the type, intensity, volume, and rest periods all determine the hormonal response.' },
+      { type: 'h', text: 'Acute vs. Chronic Effects' },
+      { type: 'p', text: 'A single heavy resistance training session can increase testosterone 15–30% for 15–60 minutes post-workout. Over weeks and months, consistent training elevates resting testosterone levels. However, overtraining — particularly excessive endurance exercise — can have the opposite effect, suppressing testosterone through chronically elevated cortisol.' },
+      { type: 'cite', text: 'Kraemer & Ratamess, "Hormonal Responses and Adaptations to Resistance Exercise and Training," Sports Medicine, 2005', url: 'https://pubmed.ncbi.nlm.nih.gov/15831061/' },
+      { type: 'h', text: 'The Best Exercises for Testosterone' },
+      { type: 'p', text: 'Compound movements that recruit large muscle groups produce the greatest hormonal response. These should form the core of your training program.' },
+      { type: 'list', items: [
+        'Squats — The king of testosterone-boosting exercises. Barbell back squats recruit the largest muscle groups in the body and produce the highest acute T response.',
+        'Deadlifts — Full-body compound movement with massive muscle recruitment. Conventional and sumo both produce significant hormonal responses.',
+        'Bench press — Major upper body compound. Heavy sets of 5–8 reps produce greater T response than lighter sets of 12+.',
+        'Overhead press — Standing barbell press activates the entire kinetic chain and produces strong hormonal response.',
+        'Barbell rows — Heavy pulls complement pressing movements and add significant muscle recruitment.',
+        'Pull-ups / chin-ups — Bodyweight compound pulling with excellent muscle activation.',
+      ]},
+      { type: 'h', text: 'Optimal Training Parameters' },
+      { type: 'list', items: [
+        'Intensity — 70–85% of your one-rep max produces the greatest T response. This means sets of 5–10 reps with challenging weight.',
+        'Volume — Moderate to high volume (3–5 sets per exercise, 4–6 exercises) is optimal. Total session volume matters more than any single set.',
+        'Rest periods — 60–90 seconds between sets maximizes both growth hormone and testosterone response. Very long rest (3+ min) reduces hormonal impact.',
+        'Session length — Keep sessions under 60 minutes. After 60 minutes, cortisol rises significantly and begins to suppress testosterone.',
+        'Frequency — 3–5 sessions per week. Full rest days are essential for hormonal recovery.',
+      ]},
+      { type: 'h', text: 'Sprint Training' },
+      { type: 'p', text: 'High-intensity sprint protocols are a powerful complement to resistance training. A 2012 study found that 6 weeks of sprint intervals increased testosterone by 17% in trained men. Protocol: 4–6 all-out sprints of 10–30 seconds with 60–90 seconds rest between sets, performed 2 times per week.' },
+      { type: 'cite', text: 'Hackney et al., "Testosterone responses to intensive interval versus steady-state endurance exercise," Journal of Endocrinological Investigation, 2012', url: 'https://pubmed.ncbi.nlm.nih.gov/22228111/' },
+      { type: 'h', text: 'What to Avoid' },
+      { type: 'list', items: [
+        'Chronic endurance training — Running 40+ miles/week is associated with lower resting testosterone. Ultra-marathon and Ironman training are particularly suppressive.',
+        'Overtraining — Training the same muscle groups daily without recovery increases cortisol chronically, suppressing T. Rest days are productive.',
+        'Training fasted without adaptation — Fasted heavy training can spike cortisol. If you train fasted, keep sessions shorter.',
+      ]},
+      { type: 'stat', label: '15–30%', desc: 'acute testosterone increase from a single heavy resistance session' },
+    ]
+  },
+  {
+    id: 'nutrition',
+    title: 'Nutrition & Testosterone',
+    subtitle: 'Specific foods, specific effects',
+    icon: 'nutrition',
+    category: 'big3',
+    readTime: '10 min',
+    content: [
+      { type: 'p', text: 'Your diet directly provides the raw materials for testosterone production. Testosterone is synthesized from cholesterol, and the process requires specific micronutrients at every step. What you eat — and what you avoid — has a measurable impact on your hormonal output.' },
+      { type: 'h', text: 'Foods That Boost Testosterone' },
+      { type: 'food', name: 'Eggs (whole)', effect: 'Excellent source of cholesterol (the raw material for T synthesis), vitamin D, and complete protein. The yolk contains nearly all the hormonal benefit — don\'t skip it. 3–4 whole eggs daily provides meaningful support.', direction: 'up' },
+      { type: 'food', name: 'Oysters', effect: 'The single best food source of zinc, which is essential for testosterone synthesis. Six oysters contain ~32mg of zinc — more than double the daily requirement. Zinc-deficient men show significantly reduced testosterone.', direction: 'up' },
+      { type: 'food', name: 'Beef & red meat', effect: 'Rich in zinc, saturated fat (needed for steroid hormone production), and complete protein. Grass-fed beef also provides conjugated linoleic acid (CLA). 4–6oz servings, 3–4 times weekly.', direction: 'up' },
+      { type: 'food', name: 'Fatty fish (salmon, sardines, mackerel)', effect: 'High in omega-3 fatty acids, which reduce inflammation and support hormonal signaling. Also provides vitamin D. Men with higher omega-3 intake show better testicular function. 2–3 servings weekly.', direction: 'up' },
+      { type: 'food', name: 'Extra virgin olive oil', effect: 'A 2013 study found that men who consumed EVOO as their primary fat source for 3 weeks showed a 17.4% increase in testosterone. Rich in monounsaturated fats and anti-inflammatory polyphenols.', direction: 'up' },
+      { type: 'food', name: 'Cruciferous vegetables (broccoli, cauliflower, cabbage)', effect: 'Contain indole-3-carbinol (I3C), which helps the body metabolize excess estrogen. Lower estrogen means less suppression of testosterone signaling. Daily intake is ideal.', direction: 'up' },
+      { type: 'food', name: 'Brazil nuts', effect: 'The richest food source of selenium, which is required for testosterone biosynthesis and thyroid function. Just 2–3 nuts daily provides your full selenium requirement.', direction: 'up' },
+      { type: 'food', name: 'Pomegranate', effect: 'A 2012 study found that drinking pomegranate juice daily for 2 weeks increased salivary testosterone by an average of 24%. Rich in antioxidants that reduce oxidative stress on Leydig cells.', direction: 'up' },
+      { type: 'food', name: 'Ginger', effect: 'A systematic review of human and animal studies found that ginger supplementation consistently increased testosterone. The mechanism involves enhanced LH production and antioxidant protection of testicular tissue.', direction: 'up' },
+      { type: 'h', text: 'Foods That Lower Testosterone' },
+      { type: 'food', name: 'Alcohol', effect: 'Alcohol damages Leydig cells directly, disrupts the HPG axis, increases aromatase activity (converting T to estrogen), and fragments REM sleep. Even moderate consumption (2–3 drinks) reduces testosterone by 6.8% for up to 24 hours. Heavy chronic use can cause testicular atrophy.', direction: 'down' },
+      { type: 'food', name: 'Soy (in excess)', effect: 'Contains phytoestrogens (isoflavones) that can mimic estrogen in the body. Moderate soy intake is likely fine, but daily heavy soy consumption (soy milk, tofu, edamame at every meal) has been associated with reduced testosterone in some studies.', direction: 'down' },
+      { type: 'food', name: 'Seed oils (canola, soybean, sunflower, corn)', effect: 'High in omega-6 polyunsaturated fatty acids, which in excess promote systemic inflammation. Chronic inflammation impairs Leydig cell function. These oils also oxidize easily when heated, creating compounds that are harmful to hormonal health.', direction: 'down' },
+      { type: 'food', name: 'Sugar & refined carbs', effect: 'A 2013 study showed that glucose ingestion caused a 25% drop in testosterone levels in men, lasting up to 2 hours. Chronic high sugar intake promotes insulin resistance, which is strongly associated with lower testosterone.', direction: 'down' },
+      { type: 'food', name: 'Trans fats & processed food', effect: 'Trans fats directly impair testicular function. Processed meats containing nitrates and preservatives are associated with lower sperm quality and reduced hormonal output. Microplastics in processed food packaging act as endocrine disruptors.', direction: 'down' },
+      { type: 'food', name: 'Mint & spearmint', effect: 'Multiple studies show that spearmint tea reduces free and total testosterone. The menthol in mint has direct anti-androgenic properties. If you drink mint tea daily, consider switching.', direction: 'down' },
+      { type: 'food', name: 'Licorice root', effect: 'Contains glycyrrhizic acid, which inhibits 11β-hydroxysteroid dehydrogenase — an enzyme that protects testosterone from cortisol. Studies show significant T reduction from regular licorice consumption.', direction: 'down' },
+      { type: 'cite', text: 'Whittaker & Harris, "Low-fat diets and testosterone in men: Systematic review and meta-analysis," J Steroid Biochemistry & Molecular Biology, 2022', url: 'https://pubmed.ncbi.nlm.nih.gov/35015858/' },
+      { type: 'h', text: 'Macronutrient Guidelines' },
+      { type: 'list', items: [
+        'Fat — At least 30–35% of total calories from fat. Men who drop below 20% fat show significantly lower testosterone. Prioritize monounsaturated (olive oil, avocado) and saturated (eggs, butter, coconut) over polyunsaturated.',
+        'Protein — 0.7–1g per pound of bodyweight. Adequate protein supports muscle recovery and provides amino acids for hormone production. Very high protein (>35% of calories) with very low fat can actually suppress T.',
+        'Carbohydrates — Don\'t fear carbs. Adequate carbohydrate intake is important for thyroid function and cortisol regulation, both of which affect testosterone. Low-carb diets can raise cortisol and suppress T in some men.',
+        'Caloric surplus/maintenance — Chronic calorie restriction lowers testosterone. Your body deprioritizes reproduction during energy deficit. If you need to lose fat, use moderate deficits (300–500 cal) rather than aggressive cuts.',
+      ]},
+      { type: 'stat', label: '25%', desc: 'testosterone drop after glucose ingestion, lasting up to 2 hours' },
+    ]
+  },
+  {
+    id: 'no-alcohol',
+    title: 'Alcohol & Testosterone',
+    subtitle: 'Why it matters more than you think',
+    icon: 'ban',
+    category: 'habits',
+    readTime: '4 min',
+    content: [
+      { type: 'p', text: 'Alcohol is one of the most potent testosterone suppressors that people consume regularly. Its effects operate through multiple mechanisms simultaneously, making it uniquely harmful to hormonal health.' },
+      { type: 'h', text: 'How Alcohol Suppresses Testosterone' },
+      { type: 'list', items: [
+        'Direct testicular toxicity — Ethanol damages Leydig cells, which are responsible for testosterone production.',
+        'HPG axis disruption — Alcohol suppresses GnRH release from the hypothalamus, reducing the hormonal signal chain.',
+        'Increased aromatase — Alcohol upregulates aromatase enzyme activity, which converts testosterone into estrogen.',
+        'Cortisol elevation — Alcohol raises cortisol, which has an inverse relationship with testosterone.',
+        'Sleep disruption — Even moderate alcohol dramatically reduces REM sleep, during which testosterone is primarily released.',
+        'NAD+ depletion — Your body uses NAD+ to metabolize alcohol, diverting it from testosterone synthesis pathways.',
+      ]},
+      { type: 'p', text: 'Even moderate drinking — 2 to 3 drinks — has been shown to reduce testosterone by 6.8% for up to 24 hours after consumption. Chronic heavy drinking can lead to testicular atrophy, gynecomastia, and significantly impaired fertility.' },
+      { type: 'stat', label: '6.8%', desc: 'testosterone reduction from just 2–3 drinks, lasting up to 24 hours' },
+    ]
+  },
+  {
+    id: 'sunlight',
+    title: 'Morning Sunlight',
+    subtitle: 'Circadian rhythm and vitamin D synthesis',
+    icon: 'sun',
+    category: 'habits',
+    readTime: '3 min',
+    content: [
+      { type: 'p', text: 'Morning sunlight exposure serves two testosterone-related functions: it sets your circadian rhythm (which governs hormonal release timing) and it initiates vitamin D synthesis in the skin.' },
+      { type: 'h', text: 'Circadian Rhythm & Hormones' },
+      { type: 'p', text: 'Testosterone follows a circadian pattern, peaking in the early morning. Exposure to bright light within the first hour of waking reinforces this cycle, ensuring your hormonal peaks are robust and properly timed. Men with disrupted circadian rhythms (shift workers, those with irregular schedules) consistently show lower testosterone.' },
+      { type: 'h', text: 'Vitamin D Connection' },
+      { type: 'p', text: 'Vitamin D functions as a hormone precursor in the body. A study of 2,299 men found that those with sufficient vitamin D levels had significantly higher testosterone than those who were deficient. 15–20 minutes of morning sunlight on exposed skin triggers meaningful vitamin D synthesis.' },
+      { type: 'cite', text: 'Pilz et al., "Effect of Vitamin D Supplementation on Testosterone Levels in Men," Hormone and Metabolic Research, 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21154195/' },
+      { type: 'stat', label: '25%', desc: 'testosterone increase from vitamin D supplementation over 12 months in deficient men' },
+    ]
+  },
+  {
+    id: 'vitamin-d',
+    title: 'Vitamin D Supplementation',
+    subtitle: 'The most common deficiency',
+    icon: 'pill',
+    category: 'habits',
+    readTime: '3 min',
+    content: [
+      { type: 'p', text: 'Vitamin D deficiency is epidemic — an estimated 42% of American adults are deficient. Since vitamin D acts as a hormone precursor, this deficiency directly impacts testosterone production. If you can\'t get regular sunlight, supplementation is essential.' },
+      { type: 'h', text: 'Dosage & Form' },
+      { type: 'list', items: [
+        'Take 3,000–5,000 IU of Vitamin D3 daily (not D2, which is less bioavailable).',
+        'Always pair with Vitamin K2 (MK-7 form, 100–200mcg), which directs calcium to bones rather than arteries.',
+        'Take with a fat-containing meal for optimal absorption — vitamin D is fat-soluble.',
+        'Get blood levels tested (25-hydroxyvitamin D). Aim for 40–60 ng/mL for optimal testosterone support.',
+      ]},
+      { type: 'cite', text: 'Pilz et al., Hormone and Metabolic Research, 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21154195/' },
+    ]
+  },
+  {
+    id: 'zinc',
+    title: 'Zinc & Testosterone',
+    subtitle: 'Essential mineral for T synthesis',
+    icon: 'beaker',
+    category: 'habits',
+    readTime: '3 min',
+    content: [
+      { type: 'p', text: 'Zinc is directly required for testosterone synthesis at the enzymatic level. Zinc deficiency can reduce testosterone by up to 75% — making it one of the most critical micronutrients for male hormonal health.' },
+      { type: 'h', text: 'Best Food Sources' },
+      { type: 'list', items: [
+        'Oysters — 32mg per 6 oysters (best natural source)',
+        'Red meat — 4.8mg per 100g serving',
+        'Pumpkin seeds — 7.8mg per 100g',
+        'Crab & lobster — 6.5mg per 100g',
+        'Chickpeas — 2.5mg per cup',
+      ]},
+      { type: 'p', text: 'If supplementing, 30mg of zinc picolinate or zinc citrate daily is effective. Avoid taking zinc on an empty stomach, and take it separately from iron and calcium supplements, which compete for absorption.' },
+      { type: 'stat', label: '75%', desc: 'potential testosterone reduction from zinc deficiency' },
+    ]
+  },
+  {
+    id: 'healthy-fats',
+    title: 'Dietary Fat & Hormones',
+    subtitle: 'Testosterone is made from cholesterol',
+    icon: 'heart',
+    category: 'habits',
+    readTime: '3 min',
+    content: [
+      { type: 'p', text: 'Testosterone is literally synthesized from cholesterol. The conversion pathway goes: cholesterol → pregnenolone → DHEA → androstenedione → testosterone. Without adequate dietary fat, your body lacks the raw material for this process.' },
+      { type: 'p', text: 'A systematic review in the Journal of Steroid Biochemistry found that men on low-fat diets had significantly lower testosterone than those on higher-fat diets. Diets with less than 20% of calories from fat are associated with measurable testosterone reduction.' },
+      { type: 'h', text: 'Best Fat Sources' },
+      { type: 'list', items: [
+        'Extra virgin olive oil — anti-inflammatory, shown to boost T directly',
+        'Whole eggs — cholesterol + vitamin D + complete protein',
+        'Avocado — monounsaturated fats + potassium',
+        'Coconut oil — medium-chain triglycerides support hormone production',
+        'Grass-fed butter — vitamin K2 + butyrate + fat-soluble vitamins',
+        'Fatty fish — omega-3s reduce inflammation that impairs Leydig cell function',
+        'Nuts (almonds, macadamia, walnuts) — healthy fats + minerals',
+      ]},
+      { type: 'cite', text: 'Whittaker & Harris, J Steroid Biochemistry & Molecular Biology, 2022', url: 'https://pubmed.ncbi.nlm.nih.gov/35015858/' },
+    ]
+  },
+  {
+    id: 'no-seed-oils',
+    title: 'Seed Oils & Processed Food',
+    subtitle: 'The hidden hormone disruptors',
+    icon: 'shield',
+    category: 'habits',
+    readTime: '3 min',
+    content: [
+      { type: 'p', text: 'Industrial seed oils — canola, soybean, sunflower, corn, and safflower — are high in omega-6 polyunsaturated fats. In excess, omega-6 promotes systemic inflammation, which impairs Leydig cell function and testosterone production.' },
+      { type: 'p', text: 'These oils also oxidize easily when heated, creating aldehydes and other compounds that act as endocrine disruptors. Processed foods additionally contain BPA from plastic packaging, phthalates, and other chemicals that directly interfere with the hormonal system.' },
+      { type: 'h', text: 'Practical Swaps' },
+      { type: 'list', items: [
+        'Cook with: extra virgin olive oil, avocado oil, coconut oil, butter, or ghee',
+        'Avoid: canola oil, soybean oil, vegetable oil, sunflower oil, corn oil',
+        'Read labels — seed oils are in nearly all packaged and restaurant food',
+        'Use glass containers instead of plastic for food storage',
+        'Filter your drinking water to remove endocrine disruptors',
+      ]},
+      { type: 'cite', text: 'Meeker et al., "BPA and Reproductive Hormones," Fertility & Sterility, 2010', url: 'https://pubmed.ncbi.nlm.nih.gov/19328465/' },
+    ]
+  },
+  {
+    id: 'resistance',
+    title: 'Resistance Training',
+    subtitle: 'Full article in the Training deep dive',
+    icon: 'dumbbell',
+    category: 'habits',
+    readTime: '1 min',
+    content: [
+      { type: 'p', text: 'Resistance training produces the most reliable acute testosterone increase of any single habit. Compound movements at 70–85% of your max, in sessions under 60 minutes, with 60–90 second rest periods, produce the optimal hormonal response.' },
+      { type: 'p', text: 'Read the full deep dive in the "Resistance Training & T" article for specific exercises, programming, and what to avoid.' },
+    ]
+  },
+  {
+    id: 'walk',
+    title: 'Walking & Moderate Cardio',
+    subtitle: 'Cortisol reduction and insulin sensitivity',
+    icon: 'walk',
+    category: 'habits',
+    readTime: '2 min',
+    content: [
+      { type: 'p', text: 'A daily 30+ minute walk reduces cortisol (testosterone\'s primary antagonist), improves insulin sensitivity, and supports cardiovascular health — all of which create a more favorable environment for testosterone production. Unlike intense endurance exercise, walking does not elevate cortisol or suppress testosterone.' },
+      { type: 'p', text: 'Walking outdoors combines the benefits of movement, sunlight exposure, and stress reduction. Men who are sedentary have consistently lower testosterone than those who are moderately active, independent of body composition.' },
+    ]
+  },
+  {
+    id: 'mindfulness',
+    title: 'Stress Management',
+    subtitle: 'Cortisol is testosterone\'s enemy',
+    icon: 'brain',
+    category: 'habits',
+    readTime: '3 min',
+    content: [
+      { type: 'p', text: 'Cortisol and testosterone have a well-documented inverse relationship. When cortisol is chronically elevated, the body downregulates testosterone production — it prioritizes survival over reproduction. This is why chronic stress is one of the most overlooked causes of low testosterone.' },
+      { type: 'h', text: 'Evidence-Based Stress Reduction' },
+      { type: 'list', items: [
+        'Meditation — 10 minutes daily can reduce cortisol by 25%. Box breathing (4-4-4-4) and body scan meditation are well-studied.',
+        'Physiological sigh — A double inhale through the nose followed by a long exhale is the fastest known method to downregulate the sympathetic nervous system. Takes 30 seconds.',
+        'Cold exposure — Activates the parasympathetic nervous system after the initial stress response, building stress resilience over time.',
+        'Nature exposure — 20 minutes in a natural environment measurably reduces cortisol. Walking in a park counts.',
+        'Social connection — Positive social interaction reduces cortisol and increases oxytocin, which supports testosterone.',
+      ]},
+      { type: 'stat', label: '25%', desc: 'cortisol reduction from 10 minutes of daily meditation' },
+    ]
+  },
+  {
+    id: 'cold',
+    title: 'Cold Exposure',
+    subtitle: 'Hormesis and hormonal resilience',
+    icon: 'snowflake',
+    category: 'habits',
+    readTime: '3 min',
+    content: [
+      { type: 'p', text: 'Cold exposure works through hormesis — a controlled stressor that triggers beneficial adaptive responses. Cold water immersion has been shown to increase norepinephrine by 200–300%, which supports alertness, mood, and metabolic function.' },
+      { type: 'p', text: 'While direct evidence for testosterone increase from cold exposure is limited, the mechanisms are supportive: improved Leydig cell function, reduced scrotal temperature (which is important for sperm and hormone production), and enhanced dopamine signaling.' },
+      { type: 'h', text: 'Protocol' },
+      { type: 'list', items: [
+        'Start with 30 seconds of cold water at the end of a normal shower',
+        'Build to 2+ minutes over 2–3 weeks',
+        'Water temperature: as cold as your tap goes (typically 50–60°F / 10–15°C)',
+        'Focus on controlled breathing — in through the nose, out through the mouth',
+        'Morning cold exposure stacks well with sunlight for circadian rhythm setting',
+      ]},
+      { type: 'cite', text: 'Šrámek et al., "Human physiological responses to immersion into water of different temperatures," European Journal of Applied Physiology, 2000', url: 'https://pubmed.ncbi.nlm.nih.gov/10751106/' },
+    ]
+  },
 ];
 
-const SOURCES = [
-  { title: 'Sleep restriction and testosterone', source: 'Leproult & Van Cauter, JAMA 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21632481/' },
-  { title: 'Resistance training and testosterone response', source: 'Kraemer & Ratamess, Sports Medicine 2005', url: 'https://pubmed.ncbi.nlm.nih.gov/15831061/' },
-  { title: 'Vitamin D supplementation and testosterone', source: 'Pilz et al., Hormone & Metabolic Research 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21154195/' },
-  { title: 'Ashwagandha and male reproductive health', source: 'Chauhan et al., Am J Men\'s Health 2023', url: 'https://pubmed.ncbi.nlm.nih.gov/36655469/' },
-  { title: 'Diet composition and testosterone', source: 'Whittaker & Harris, J Steroid Biochem Mol Biol 2022', url: 'https://pubmed.ncbi.nlm.nih.gov/35015858/' },
-  { title: 'Cold exposure and catecholamines', source: 'Srámek et al., European J Applied Physiology 2000', url: 'https://pubmed.ncbi.nlm.nih.gov/10751106/' },
-  { title: 'BPA exposure and male hormones', source: 'Meeker et al., Fertility & Sterility 2010', url: 'https://pubmed.ncbi.nlm.nih.gov/19328465/' },
-  { title: 'Sprint training and testosterone', source: 'Hackney et al., J Strength Cond Research 2012', url: 'https://pubmed.ncbi.nlm.nih.gov/22228111/' },
-  { title: 'Intermittent fasting and growth hormone', source: 'Ho et al., J Clinical Investigation 1988', url: 'https://pubmed.ncbi.nlm.nih.gov/3127426/' },
-  { title: 'Habit formation timeline (66 days)', source: 'Lally et al., European J Social Psychology 2010', url: 'https://pubmed.ncbi.nlm.nih.gov/20674467/' },
+// ============================================================
+// TESTOSTERONE 101 ARTICLES (revised — no emojis)
+// ============================================================
+const T101_ARTICLES = [
+  {
+    id: 'what',
+    title: 'What Is Testosterone?',
+    icon: 'dna',
+    content: [
+      { type: 'p', text: 'Testosterone is the primary male sex hormone and an anabolic steroid. It plays a key role in muscle mass, bone density, body hair, red blood cell production, mood regulation, and sex drive. Women also produce testosterone in smaller amounts — it\'s essential for both sexes.' },
+      { type: 'p', text: 'It\'s made primarily in the Leydig cells of the testes, with small amounts from the adrenal glands. Production is regulated by the hypothalamic-pituitary-gonadal (HPG) axis — a hormonal feedback loop between the brain and the testes.' },
+    ]
+  },
+  {
+    id: 'how',
+    title: 'How Your Body Makes It',
+    icon: 'beaker',
+    content: [
+      { type: 'p', text: 'It starts in the brain. Your hypothalamus releases GnRH (gonadotropin-releasing hormone), which signals the pituitary gland to release LH (luteinizing hormone) and FSH (follicle-stimulating hormone). LH travels to the testes and tells the Leydig cells to convert cholesterol into testosterone.' },
+      { type: 'p', text: 'This is why dietary fat, sleep, and stress management are critical — they directly affect this signaling chain. The conversion pathway: cholesterol → pregnenolone → DHEA → androstenedione → testosterone.' },
+    ]
+  },
+  {
+    id: 'does',
+    title: 'What Testosterone Does',
+    icon: 'zap',
+    content: [
+      { type: 'list', items: [
+        'Builds and maintains muscle mass and strength',
+        'Regulates fat distribution — less belly fat at healthy levels',
+        'Drives libido and sexual function',
+        'Supports bone mineral density',
+        'Produces red blood cells, supporting energy and endurance',
+        'Influences mood, confidence, motivation, and cognitive sharpness',
+        'Supports sperm production and fertility',
+      ]},
+    ]
+  },
+  {
+    id: 'doesnt',
+    title: 'What It Doesn\'t Do',
+    icon: 'warning',
+    content: [
+      { type: 'p', text: 'Testosterone alone doesn\'t make you aggressive — that\'s largely a myth. It doesn\'t guarantee muscle growth without exercise. It\'s not a personality trait. Having high T doesn\'t automatically mean better health if other markers are off.' },
+      { type: 'p', text: 'And it\'s only one piece of the hormonal puzzle — cortisol, estrogen, SHBG, thyroid hormones, and insulin all interact with testosterone. Optimizing one without considering the others misses the full picture.' },
+    ]
+  },
+  {
+    id: 'low',
+    title: 'Signs of Low Testosterone',
+    icon: 'chart',
+    content: [
+      { type: 'list', items: [
+        'Persistent fatigue even with adequate sleep',
+        'Reduced sex drive or erectile difficulty',
+        'Loss of muscle mass or difficulty building muscle',
+        'Increased body fat, especially around the midsection',
+        'Brain fog, poor concentration, memory issues',
+        'Mood changes — irritability, low motivation, depression',
+        'Decreased bone density',
+        'Sleep disturbances',
+        'Reduced facial and body hair growth over time',
+      ]},
+    ]
+  },
+  {
+    id: 'high',
+    title: 'Risks of Excess Testosterone',
+    icon: 'warning',
+    content: [
+      { type: 'p', text: 'Excess testosterone (usually from external sources like TRT or steroids) can convert to estrogen via aromatase, causing gynecomastia. It can increase red blood cell count to dangerous levels. Other risks include acne, hair loss, mood instability, sleep apnea, reduced sperm count, and testicular shrinkage.' },
+      { type: 'p', text: 'This is why Andros focuses on natural optimization — your body has feedback loops that prevent overproduction when you support it naturally.' },
+    ]
+  },
 ];
 
-function ProtocolsView({ isPremium, onUpgrade, onSelect }) {
-  const [learnTab, setLearnTab] = useState('protocols');
-  const [expandedEdu, setExpandedEdu] = useState(null);
+// Learn content loaded
+
+
+// LEARN VIEW COMPONENT — clean library design
+// Replaces ProtocolsView in App.jsx
+
+// Uses: c (color palette), sans, serif, LearnIcon, HABIT_ARTICLES, T101_ARTICLES, PROTOCOLS, SOURCES
+// from the content file
+
+function LearnView({ isPremium, onUpgrade, onSelect }) {
+  const [learnTab, setLearnTab] = useState('library');
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [expandedT101, setExpandedT101] = useState(null);
+
+  const tabs = [
+    { id: 'library', label: 'Library' },
+    { id: 'protocols', label: 'Protocols' },
+    { id: 't101', label: 'T 101' },
+    { id: 'sources', label: 'Sources' },
+  ];
+
+  // Article detail view
+  if (selectedArticle) {
+    return <div>
+      <button onClick={() => setSelectedArticle(null)} style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'none',color:c.textSec,cursor:'pointer',fontSize:13,marginBottom:24,padding:'8px 0',fontFamily:sans }}>← Back</button>
+      
+      <div style={{ marginBottom:24 }}>
+        <div style={{ width:44,height:44,borderRadius:10,background:c.bgElevated,border:`1px solid ${c.border}`,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16 }}>
+          <LearnIcon type={selectedArticle.icon} size={22} color={c.accent} />
+        </div>
+        {selectedArticle.category === 'big3' && <div style={{ fontSize:9,fontWeight:700,letterSpacing:2,textTransform:'uppercase',color:c.accent,marginBottom:8,fontFamily:sans }}>Deep Dive</div>}
+        <h2 style={{ fontSize:22,fontWeight:400,color:c.text,fontFamily:serif,lineHeight:1.2,marginBottom:6 }}>{selectedArticle.title}</h2>
+        <p style={{ fontSize:12,color:c.textMuted,fontFamily:sans }}>{selectedArticle.readTime} read</p>
+      </div>
+
+      <div style={{ borderTop:`1px solid ${c.border}`,paddingTop:24 }}>
+        {selectedArticle.content.map((block, i) => {
+          if (block.type === 'h') return <h3 key={i} style={{ fontSize:14,fontWeight:700,color:c.text,fontFamily:sans,marginTop:i > 0 ? 28 : 0,marginBottom:10,letterSpacing:0.2 }}>{block.text}</h3>;
+          
+          if (block.type === 'p') return <p key={i} style={{ fontSize:14,lineHeight:1.8,color:c.textSec,fontFamily:sans,marginBottom:16 }}>{block.text}</p>;
+          
+          if (block.type === 'list') return <div key={i} style={{ marginBottom:16 }}>
+            {block.items.map((item, j) => {
+              const parts = item.split(' — ');
+              return <div key={j} style={{ display:'flex',gap:12,marginBottom:10,paddingLeft:4 }}>
+                <div style={{ width:4,height:4,borderRadius:2,background:c.accent,flexShrink:0,marginTop:8 }} />
+                <p style={{ fontSize:13,lineHeight:1.7,color:c.textSec,fontFamily:sans,margin:0 }}>
+                  {parts.length > 1 ? <><span style={{ fontWeight:600,color:c.text }}>{parts[0]}</span> — {parts.slice(1).join(' — ')}</> : item}
+                </p>
+              </div>;
+            })}
+          </div>;
+
+          if (block.type === 'food') return <div key={i} style={{ display:'flex',gap:14,padding:16,background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:10,marginBottom:8 }}>
+            <div style={{ width:3,borderRadius:2,background:block.direction === 'up' ? '#6ab06a' : '#c45c5c',flexShrink:0 }} />
+            <div>
+              <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:4 }}>
+                <span style={{ fontSize:13,fontWeight:700,color:c.text,fontFamily:sans }}>{block.name}</span>
+                <span style={{ fontSize:10,fontWeight:700,color:block.direction === 'up' ? '#6ab06a' : '#c45c5c',fontFamily:sans,letterSpacing:0.5 }}>{block.direction === 'up' ? '↑ T' : '↓ T'}</span>
+              </div>
+              <p style={{ fontSize:12,lineHeight:1.7,color:c.textSec,fontFamily:sans,margin:0 }}>{block.effect}</p>
+            </div>
+          </div>;
+
+          if (block.type === 'cite') return <a key={i} href={block.url} target="_blank" rel="noopener noreferrer" style={{ display:'flex',gap:10,padding:'12px 16px',background:c.bgElevated,border:`1px solid ${c.border}`,borderRadius:8,marginBottom:16,textDecoration:'none',alignItems:'flex-start' }}>
+            <LearnIcon type="book" size={14} color={c.textMuted} />
+            <span style={{ fontSize:11,lineHeight:1.5,color:c.textMuted,fontFamily:sans }}>{block.text}</span>
+          </a>;
+
+          if (block.type === 'stat') return <div key={i} style={{ padding:24,background:c.bgCard,border:`1px solid ${c.accent}25`,borderRadius:12,textAlign:'center',marginTop:24,marginBottom:16 }}>
+            <div style={{ fontSize:36,fontWeight:700,color:c.accent,fontFamily:serif,marginBottom:4 }}>{block.label}</div>
+            <p style={{ fontSize:12,color:c.textSec,fontFamily:sans }}>{block.desc}</p>
+          </div>;
+
+          return null;
+        })}
+      </div>
+    </div>;
+  }
+
+  const big3 = HABIT_ARTICLES.filter(a => a.category === 'big3');
+  const habitArticles = HABIT_ARTICLES.filter(a => a.category === 'habits');
 
   return <div>
-    <h2 style={{ fontSize:20,fontWeight:400,marginBottom:16,color:c.text,fontFamily:serif }}>Learn</h2>
-    <div style={{ display:'flex',gap:0,marginBottom:22,background:c.bgCard,borderRadius:10,border:`1px solid ${c.border}`,overflow:'hidden' }}>
-      {[{id:'protocols',label:'Protocols'},{id:'education',label:'Testosterone 101'},{id:'sources',label:'Sources'}].map(t=>
-        <button key={t.id} onClick={()=>setLearnTab(t.id)} style={{ flex:1,padding:'11px 8px',background:learnTab===t.id?c.bgElevated:'transparent',border:'none',cursor:'pointer',color:learnTab===t.id?c.accent:c.textMuted,fontSize:11,fontWeight:600,fontFamily:sans,letterSpacing:0.3,transition:'all 0.2s',borderBottom:learnTab===t.id?`2px solid ${c.accent}`:'2px solid transparent' }}>{t.label}</button>
+    <h2 style={{ fontSize:20,fontWeight:400,marginBottom:4,color:c.text,fontFamily:serif }}>Learn</h2>
+    <p style={{ fontSize:12,color:c.textMuted,marginBottom:18,fontFamily:sans }}>Science-backed knowledge for testosterone optimization</p>
+
+    {/* Tab bar */}
+    <div style={{ display:'flex',gap:0,marginBottom:24,borderBottom:`1px solid ${c.border}` }}>
+      {tabs.map(t =>
+        <button key={t.id} onClick={() => setLearnTab(t.id)} style={{ padding:'10px 14px',background:'none',border:'none',cursor:'pointer',color:learnTab===t.id?c.text:c.textMuted,fontSize:11,fontWeight:600,fontFamily:sans,letterSpacing:0.5,transition:'all 0.2s',borderBottom:learnTab===t.id?`2px solid ${c.accent}`:'2px solid transparent',marginBottom:-1 }}>{t.label}</button>
       )}
     </div>
 
-    {learnTab==='protocols'&&<div>
-      <p style={{ fontSize:13,color:c.textSec,marginBottom:18,lineHeight:1.5,fontFamily:sans }}>Follow in order for best results.</p>
-      {PROTOCOLS.map(pr=>{const lk=pr.tier==='premium'&&!isPremium; return <button key={pr.id} onClick={()=>onSelect(pr)} style={{ width:'100%',textAlign:'left',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:14 }}><div style={{ width:48,height:48,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,background:c.bgElevated,border:`1px solid ${c.borderLight}`,flexShrink:0 }}>{pr.icon}</div><div style={{ flex:1 }}><div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:3 }}><span style={{ fontSize:15,fontWeight:700,color:c.text,fontFamily:sans }}>{pr.title}</span>{lk&&<span style={{ fontSize:12,color:c.accent }}>🔒</span>}</div><div style={{ fontSize:12,color:c.textMuted,fontFamily:sans }}>{pr.level} · {pr.duration}</div></div><span style={{ color:c.textMuted,fontSize:16,flexShrink:0 }}>›</span></button>;})}
-      {!isPremium&&<div style={{ background:c.accentGlow,border:`1px solid ${c.accent}25`,borderRadius:12,padding:18,textAlign:'center',marginTop:8 }}><p style={{ fontSize:13,color:c.textSec,marginBottom:10,fontFamily:sans }}>Unlock all protocols with Premium</p><button onClick={onUpgrade} style={{ cursor:'pointer',background:c.accent,border:'none',color:c.bg,fontWeight:700,fontSize:13,padding:'11px 22px',borderRadius:8,fontFamily:sans }}>Start Free Trial — $8.99/mo</button></div>}
+    {/* LIBRARY TAB */}
+    {learnTab === 'library' && <div>
+      
+      {/* Deep Dives — The Big 3 */}
+      <div style={{ marginBottom:32 }}>
+        <div style={{ fontSize:9,fontWeight:700,letterSpacing:2.5,textTransform:'uppercase',color:c.accent,marginBottom:14,fontFamily:sans }}>Deep Dives</div>
+        {big3.map(article => <button key={article.id} onClick={() => setSelectedArticle(article)} style={{ width:'100%',textAlign:'left',display:'flex',gap:16,padding:18,background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,marginBottom:8,cursor:'pointer',alignItems:'center',transition:'border-color 0.2s' }}
+          onMouseOver={e => e.currentTarget.style.borderColor = c.accent + '40'}
+          onMouseOut={e => e.currentTarget.style.borderColor = c.border}
+        >
+          <div style={{ width:44,height:44,borderRadius:10,background:c.bgElevated,border:`1px solid ${c.borderLight}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+            <LearnIcon type={article.icon} size={20} color={c.accent} />
+          </div>
+          <div style={{ flex:1,minWidth:0 }}>
+            <div style={{ fontSize:14,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:3 }}>{article.title}</div>
+            <div style={{ fontSize:11,color:c.textMuted,fontFamily:sans }}>{article.subtitle}</div>
+          </div>
+          <div style={{ display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0 }}>
+            <span style={{ fontSize:10,color:c.textMuted,fontFamily:sans }}>{article.readTime}</span>
+            <LearnIcon type="arrow" size={14} color={c.textMuted} />
+          </div>
+        </button>)}
+      </div>
+
+      {/* Habit Articles */}
+      <div>
+        <div style={{ fontSize:9,fontWeight:700,letterSpacing:2.5,textTransform:'uppercase',color:c.accent,marginBottom:14,fontFamily:sans }}>By Habit</div>
+        <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
+          {habitArticles.map(article => <button key={article.id} onClick={() => setSelectedArticle(article)} style={{ textAlign:'left',padding:16,background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:10,cursor:'pointer',transition:'border-color 0.2s',display:'flex',flexDirection:'column',gap:10 }}
+            onMouseOver={e => e.currentTarget.style.borderColor = c.accent + '40'}
+            onMouseOut={e => e.currentTarget.style.borderColor = c.border}
+          >
+            <div style={{ width:32,height:32,borderRadius:8,background:c.bgElevated,border:`1px solid ${c.borderLight}`,display:'flex',alignItems:'center',justifyContent:'center' }}>
+              <LearnIcon type={article.icon} size={16} color={c.accent} />
+            </div>
+            <div>
+              <div style={{ fontSize:12,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:2,lineHeight:1.3 }}>{article.title}</div>
+              <div style={{ fontSize:10,color:c.textMuted,fontFamily:sans }}>{article.readTime}</div>
+            </div>
+          </button>)}
+        </div>
+      </div>
     </div>}
 
-    {learnTab==='education'&&<div>
-      {T_EDUCATION.map(item=><div key={item.id} style={{ background:c.bgCard,border:`1px solid ${expandedEdu===item.id?c.accent+'40':c.border}`,borderRadius:12,marginBottom:10,overflow:'hidden',transition:'border-color 0.2s' }}>
-        <button onClick={()=>setExpandedEdu(expandedEdu===item.id?null:item.id)} style={{ width:'100%',display:'flex',alignItems:'center',gap:14,padding:'16px 18px',background:'none',border:'none',cursor:'pointer',textAlign:'left' }}>
-          <span style={{ fontSize:22 }}>{item.icon}</span>
-          <span style={{ flex:1,fontSize:15,fontWeight:600,color:c.text,fontFamily:sans }}>{item.title}</span>
-          <span style={{ color:c.textMuted,fontSize:16,transform:expandedEdu===item.id?'rotate(90deg)':'rotate(0)',transition:'transform 0.2s' }}>›</span>
+    {/* PROTOCOLS TAB */}
+    {learnTab === 'protocols' && <div>
+      <p style={{ fontSize:13,color:c.textSec,marginBottom:18,lineHeight:1.5,fontFamily:sans }}>Structured programs to follow. Start with Foundation, progress to Elite.</p>
+      {PROTOCOLS.map(pr => {
+        const lk = pr.tier === 'premium' && !isPremium;
+        return <button key={pr.id} onClick={() => onSelect(pr)} style={{ width:'100%',textAlign:'left',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:18,marginBottom:10,cursor:'pointer',display:'flex',alignItems:'center',gap:14,transition:'border-color 0.2s' }}
+          onMouseOver={e => e.currentTarget.style.borderColor = c.accent + '40'}
+          onMouseOut={e => e.currentTarget.style.borderColor = c.border}
+        >
+          <div style={{ width:44,height:44,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',background:c.bgElevated,border:`1px solid ${c.borderLight}`,flexShrink:0 }}>
+            <LearnIcon type={pr.id === 'beginner' ? 'layers' : pr.id === 'intermediate' ? 'zap' : 'chart'} size={20} color={c.accent} />
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:3 }}>
+              <span style={{ fontSize:14,fontWeight:600,color:c.text,fontFamily:sans }}>{pr.title}</span>
+              {lk && <LearnIcon type="lock" size={12} color={c.accent} />}
+            </div>
+            <div style={{ fontSize:11,color:c.textMuted,fontFamily:sans }}>{pr.level} · {pr.duration}</div>
+          </div>
+          <LearnIcon type="arrow" size={14} color={c.textMuted} />
+        </button>;
+      })}
+      {!isPremium && <div style={{ background:c.bgElevated,border:`1px solid ${c.accent}25`,borderRadius:12,padding:18,textAlign:'center',marginTop:8 }}>
+        <p style={{ fontSize:13,color:c.textSec,marginBottom:10,fontFamily:sans }}>Unlock all protocols with Premium</p>
+        <button onClick={onUpgrade} style={{ cursor:'pointer',background:c.accent,border:'none',color:c.bg,fontWeight:700,fontSize:13,padding:'11px 22px',borderRadius:8,fontFamily:sans }}>Start Free Trial — $8.99/mo</button>
+      </div>}
+    </div>}
+
+    {/* T 101 TAB */}
+    {learnTab === 't101' && <div>
+      {T101_ARTICLES.map(item => <div key={item.id} style={{ background:c.bgCard,border:`1px solid ${expandedT101===item.id?c.accent+'30':c.border}`,borderRadius:12,marginBottom:8,overflow:'hidden',transition:'border-color 0.2s' }}>
+        <button onClick={() => setExpandedT101(expandedT101===item.id?null:item.id)} style={{ width:'100%',display:'flex',alignItems:'center',gap:14,padding:'16px 18px',background:'none',border:'none',cursor:'pointer',textAlign:'left' }}>
+          <div style={{ width:32,height:32,borderRadius:8,background:c.bgElevated,border:`1px solid ${c.borderLight}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+            <LearnIcon type={item.icon} size={16} color={c.accent} />
+          </div>
+          <span style={{ flex:1,fontSize:14,fontWeight:600,color:c.text,fontFamily:sans }}>{item.title}</span>
+          <span style={{ color:c.textMuted,fontSize:14,transform:expandedT101===item.id?'rotate(90deg)':'rotate(0)',transition:'transform 0.2s' }}>›</span>
         </button>
-        {expandedEdu===item.id&&<div style={{ padding:'0 18px 18px' }}>
-          {item.content.split('. ').reduce((acc, sentence, i, arr) => {
-            const text = sentence + (i < arr.length - 1 ? '.' : '');
-            if (text.trim()) acc.push(text);
-            return acc;
-          }, []).map((line, i) => <div key={i} style={{ display:'flex',alignItems:'flex-start',gap:8,marginBottom:8 }}>
-            <span style={{ color:c.accent,fontSize:14,fontWeight:300,marginTop:1,flexShrink:0 }}>+</span>
-            <span style={{ fontSize:13,lineHeight:1.7,color:c.textSec,fontFamily:sans }}>{line.trim()}</span>
-          </div>)}
+        {expandedT101 === item.id && <div style={{ padding:'0 18px 18px' }}>
+          {item.content.map((block, i) => {
+            if (block.type === 'p') return <p key={i} style={{ fontSize:13,lineHeight:1.8,color:c.textSec,fontFamily:sans,marginBottom:12 }}>{block.text}</p>;
+            if (block.type === 'list') return <div key={i}>{block.items.map((li, j) => <div key={j} style={{ display:'flex',gap:10,marginBottom:6,paddingLeft:4 }}><div style={{ width:4,height:4,borderRadius:2,background:c.accent,flexShrink:0,marginTop:7 }} /><span style={{ fontSize:13,lineHeight:1.6,color:c.textSec,fontFamily:sans }}>{li}</span></div>)}</div>;
+            return null;
+          })}
         </div>}
       </div>)}
     </div>}
 
-    {learnTab==='sources'&&<div>
-      <p style={{ fontSize:13,color:c.textSec,marginBottom:18,lineHeight:1.5,fontFamily:sans }}>The science behind every protocol and habit in Andros. Tap any study to read the full paper.</p>
-      {SOURCES.map((s,i)=><a key={i} href={s.url} target="_blank" rel="noopener noreferrer" style={{ display:'block',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,padding:16,marginBottom:8,textDecoration:'none',transition:'border-color 0.2s' }}>
-        <div style={{ fontSize:13,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:4 }}>{s.title}</div>
-        <div style={{ fontSize:11,color:c.textMuted,fontFamily:sans }}>{s.source}</div>
+    {/* SOURCES TAB */}
+    {learnTab === 'sources' && <div>
+      <p style={{ fontSize:13,color:c.textSec,marginBottom:18,lineHeight:1.5,fontFamily:sans }}>Every claim in Andros is backed by peer-reviewed research. Tap to read the full paper.</p>
+      {SOURCES.map((s, i) => <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" style={{ display:'flex',gap:12,background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:10,padding:16,marginBottom:8,textDecoration:'none',alignItems:'center',transition:'border-color 0.2s' }}>
+        <div style={{ width:28,height:28,borderRadius:6,background:c.bgElevated,border:`1px solid ${c.borderLight}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+          <LearnIcon type="book" size={13} color={c.textMuted} />
+        </div>
+        <div>
+          <div style={{ fontSize:12,fontWeight:600,color:c.text,fontFamily:sans,marginBottom:2 }}>{s.title}</div>
+          <div style={{ fontSize:10,color:c.textMuted,fontFamily:sans }}>{s.source}</div>
+        </div>
       </a>)}
     </div>}
   </div>;
 }
+
 
 function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -2304,7 +2849,7 @@ export default function App() {
         <div style={{ marginTop:12 }}><SleepTracker sleepLog={sleepLog} onLogSleep={logSleep} /></div>
         <button onClick={()=>setShowScorecard(true)} style={{ width:'100%',marginTop:24,padding:16,borderRadius:12,border:'none',cursor:'pointer',background:`linear-gradient(135deg,${c.accent},${c.accentDim})`,color:c.bg,fontSize:16,fontWeight:700,fontFamily:sans,letterSpacing:0.5,boxShadow:'0 4px 20px rgba(212,164,74,0.25)' }}>Get My Score</button>
       </div>}
-      {tab==='protocols'&&(selectedProtocol?<ProtocolDetail protocol={selectedProtocol} onBack={()=>setSelectedProtocol(null)} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />:<ProtocolsView isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onSelect={setSelectedProtocol} />)}
+      {tab==='protocols'&&(selectedProtocol?<ProtocolDetail protocol={selectedProtocol} onBack={()=>setSelectedProtocol(null)} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} />:<LearnView isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onSelect={setSelectedProtocol} />)}
       {tab==='stats'&&<StatsView checkins={checkins} moodLog={moodLog} sleepLog={sleepLog} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} tScore={tScore} />}
       {tab==='profile'&&<ProfileView user={user} isPremium={isPremium} onUpgrade={()=>setShowPremium(true)} onLogout={handleLogout} onUpdateUser={setUser} />}
     </main>
