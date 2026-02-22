@@ -1006,8 +1006,8 @@ function CorrelationsSection({ checkins, moodLog, sleepLog, isPremium, onUpgrade
       }
     });
 
-    // Sleep correlations for each habit
-    DEFAULT_HABITS.forEach(habit => {
+    // Sleep correlations for each habit (exclude 'sleep' habit - self-referential)
+    DEFAULT_HABITS.filter(h => h.id !== 'sleep').forEach(habit => {
       const withDays = [];
       const withoutDays = [];
 
