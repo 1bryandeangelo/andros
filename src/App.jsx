@@ -290,6 +290,19 @@ const DataLayer = {
 
   // STRIPE CHECKOUT
   async createCheckout(userId, email) {
+    if (!USE_SUPABASE) {
+      LocalStore.set('premium', true);
+      return { offline: true };
+    }
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ user_id: userId, email }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  },
 
   // CUSTOM HABITS
   async getCustomHabits(userId) {
@@ -323,20 +336,6 @@ const DataLayer = {
     }
     const habits = LocalStore.get('custom_habits', []).filter(h => h.dbId !== dbId);
     LocalStore.set('custom_habits', habits);
-  },
-    if (!USE_SUPABASE) {
-      // In offline mode, just toggle premium locally
-      LocalStore.set('premium', true);
-      return { offline: true };
-    }
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-      body: JSON.stringify({ user_id: userId, email }),
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
   },
 };
 
@@ -1309,34 +1308,6 @@ function ProtocolsView({ isPremium, onUpgrade, onSelect }) {
   </div>;
 }
 
-// Notification scheduler
-let notifTimer = null;
-function scheduleNotification(timeStr) {
-  if (notifTimer) clearTimeout(notifTimer);
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const schedule = () => {
-    const [h, m] = timeStr.split(':').map(Number);
-    const now = new Date();
-    const target = new Date(now);
-    target.setHours(h, m, 0, 0);
-    if (target <= now) target.setDate(target.getDate() + 1);
-    const ms = target - now;
-    notifTimer = setTimeout(() => {
-      new Notification('Andros Daily Reminder', {
-        body: 'Time to check in on your testosterone optimization habits.',
-        icon: '/icon-192.png',
-        badge: '/icon-192.png'
-      });
-      schedule(); // re-schedule for next day
-    }, ms);
-  };
-  schedule();
-}
-// Auto-start notifications if enabled
-if (typeof window !== 'undefined' && localStorage.getItem('andros_notif') === 'on') {
-  scheduleNotification(localStorage.getItem('andros_notif_time') || '09:00');
-}
-
 function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showNameEdit, setShowNameEdit] = useState(false);
@@ -1349,8 +1320,6 @@ function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
-  const [notifEnabled, setNotifEnabled] = useState(localStorage.getItem('andros_notif') !== 'off');
-  const [notifTime, setNotifTime] = useState(localStorage.getItem('andros_notif_time') || '09:00');
 
   const handleNameSave = async () => {
     if (!editName.trim()) return;
@@ -1398,32 +1367,7 @@ function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
     } catch(e) { alert('Unable to connect to subscription management. Check your internet connection and try again.'); }
   };
 
-  const handleNotifToggle = async () => {
-    if (!notifEnabled) {
-      // Turning on
-      if ('Notification' in window) {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          setNotifEnabled(true);
-          localStorage.setItem('andros_notif', 'on');
-          scheduleNotification(notifTime);
-        } else {
-          alert('Please enable notifications in your browser settings to use this feature.');
-        }
-      } else {
-        alert('Notifications are not supported in this browser.');
-      }
-    } else {
-      setNotifEnabled(false);
-      localStorage.setItem('andros_notif', 'off');
-    }
-  };
-
-  const handleNotifTimeChange = (t) => {
-    setNotifTime(t);
-    localStorage.setItem('andros_notif_time', t);
-    if (notifEnabled) scheduleNotification(t);
-  };
+  const handleNotifTimeChange = (t) => {};
 
   const inp = { width:'100%',background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:8,padding:'12px 14px',fontSize:14,color:c.text,outline:'none',boxSizing:'border-box',fontFamily:sans };
   const sectionStyle = { background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12,overflow:'hidden',marginBottom:12 };
