@@ -290,6 +290,40 @@ const DataLayer = {
 
   // STRIPE CHECKOUT
   async createCheckout(userId, email) {
+
+  // CUSTOM HABITS
+  async getCustomHabits(userId) {
+    if (USE_SUPABASE) {
+      const sb = getSupabase();
+      const rows = await sb.select('custom_habits', { eq: { user_id: userId } });
+      return rows.map(r => ({ id: 'custom_' + r.id, dbId: r.id, name: r.name, icon: r.icon || '⭐', category: 'Custom', science: '', isCustom: true }));
+    }
+    return LocalStore.get('custom_habits', []);
+  },
+
+  async addCustomHabit(userId, name, icon) {
+    if (USE_SUPABASE) {
+      const sb = getSupabase();
+      const rows = await sb.insert('custom_habits', [{ user_id: userId, name, icon: icon || '⭐' }]);
+      const r = rows[0];
+      return { id: 'custom_' + r.id, dbId: r.id, name: r.name, icon: r.icon || '⭐', category: 'Custom', science: '', isCustom: true };
+    }
+    const habits = LocalStore.get('custom_habits', []);
+    const newH = { id: 'custom_' + Date.now(), name, icon: icon || '⭐', category: 'Custom', science: '', isCustom: true };
+    habits.push(newH);
+    LocalStore.set('custom_habits', habits);
+    return newH;
+  },
+
+  async deleteCustomHabit(userId, dbId) {
+    if (USE_SUPABASE) {
+      const sb = getSupabase();
+      await sb.delete('custom_habits', { eq: { user_id: userId, id: dbId } });
+      return;
+    }
+    const habits = LocalStore.get('custom_habits', []).filter(h => h.dbId !== dbId);
+    LocalStore.set('custom_habits', habits);
+  },
     if (!USE_SUPABASE) {
       // In offline mode, just toggle premium locally
       LocalStore.set('premium', true);
@@ -1469,16 +1503,10 @@ function ProfileView({ user, isPremium, onUpgrade, onLogout, onUpdateUser }) {
     {/* Notifications */}
     <div style={{ fontSize:11,fontWeight:600,color:c.textMuted,textTransform:'uppercase',letterSpacing:1.5,marginBottom:8,paddingLeft:4,fontFamily:sans,marginTop:20 }}>Notifications</div>
     <div style={sectionStyle}>
-      <div style={{...rowStyle}} onClick={handleNotifToggle}>
-        <span style={rowLabel}>Daily Reminder</span>
-        <div style={{ width:44,height:24,borderRadius:12,background:notifEnabled?c.accent:c.bgElevated,border:`1px solid ${notifEnabled?c.accent:c.border}`,position:'relative',transition:'all 0.2s',cursor:'pointer' }}>
-          <div style={{ width:20,height:20,borderRadius:10,background:notifEnabled?c.bg:'#555',position:'absolute',top:1,left:notifEnabled?22:1,transition:'all 0.2s' }}/>
-        </div>
+      <div style={{...rowStyle, borderBottom:'none'}}>
+        <span style={rowLabel}>Daily Reminders</span>
+        <span style={{ fontSize:11,color:c.accent,fontFamily:sans,fontWeight:500 }}>Coming soon</span>
       </div>
-      {notifEnabled&&<div style={{...rowStyle, borderBottom:'none'}}>
-        <span style={rowLabel}>Reminder Time</span>
-        <input type="time" value={notifTime} onChange={e=>handleNotifTimeChange(e.target.value)} style={{ background:c.bgElevated,border:`1px solid ${c.border}`,borderRadius:6,padding:'6px 10px',color:c.text,fontSize:13,fontFamily:sans,outline:'none' }} />
-      </div>}
     </div>
 
     {/* App Info */}
@@ -1932,15 +1960,52 @@ function AuthScreen({ onLogin }) {
 // MAIN APP
 // ============================================================
 
+// ============================================================
+// CUSTOM HABIT ADDER
+// ============================================================
+const HABIT_ICONS = ['⭐','💧','🏃','📖','🧘','💊','🥗','🍎','🚿','🧠','💪','🌿','🎯','🔥','❄️','☕','🫁','🩸','🥩','🐟'];
+
+function CustomHabitAdder({ onAdd }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [icon, setIcon] = useState('⭐');
+
+  const handleAdd = () => {
+    if (!name.trim()) return;
+    onAdd(name.trim(), icon);
+    setName('');
+    setIcon('⭐');
+    setOpen(false);
+  };
+
+  if (!open) return <button onClick={()=>setOpen(true)} style={{ width:'100%',padding:14,borderRadius:10,border:`1px dashed ${c.accent}40`,background:'transparent',color:c.accent,fontSize:13,cursor:'pointer',fontFamily:sans,marginBottom:16,fontWeight:500 }}>+ Add Custom Habit</button>;
+
+  return <div style={{ background:c.bgCard,border:`1px solid ${c.accent}40`,borderRadius:12,padding:18,marginBottom:16 }}>
+    <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14 }}>
+      <h3 style={{ fontSize:13,fontWeight:600,color:c.text,fontFamily:sans }}>New Custom Habit</h3>
+      <button onClick={()=>setOpen(false)} style={{ background:'none',border:'none',color:c.textMuted,cursor:'pointer',fontSize:14 }}>✕</button>
+    </div>
+    <div style={{ display:'flex',gap:10,marginBottom:14 }}>
+      <div style={{ width:48,height:48,borderRadius:10,background:c.bgElevated,border:`1px solid ${c.border}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0 }}>{icon}</div>
+      <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="Habit name..." maxLength={40} onKeyDown={e=>e.key==='Enter'&&handleAdd()} style={{ flex:1,background:c.bgElevated,border:`1px solid ${c.border}`,borderRadius:8,padding:'10px 14px',fontSize:14,color:c.text,outline:'none',fontFamily:sans }} />
+    </div>
+    <div style={{ display:'flex',flexWrap:'wrap',gap:6,marginBottom:14 }}>
+      {HABIT_ICONS.map(ic => <button key={ic} onClick={()=>setIcon(ic)} style={{ width:36,height:36,borderRadius:8,border:`1px solid ${icon===ic?c.accent:c.border}`,background:icon===ic?c.accentGlow:c.bgElevated,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>{ic}</button>)}
+    </div>
+    <button onClick={handleAdd} disabled={!name.trim()} style={{ width:'100%',padding:12,borderRadius:8,border:'none',background:name.trim()?c.accent:c.bgElevated,color:name.trim()?c.bg:c.textMuted,fontSize:13,fontWeight:700,cursor:name.trim()?'pointer':'default',fontFamily:sans }}>Add Habit</button>
+  </div>;
+}
+
 export default function App() {
   const [user,setUser]=useState(null);const [isPremium,setIsPremium]=useState(false);const [tab,setTab]=useState('today');
   const [checkins,setCheckins]=useState({});const [moodLog,setMoodLog]=useState({});const [sleepLog,setSleepLog]=useState({});
   const [scienceHabit,setScienceHabit]=useState(null);const [showPremium,setShowPremium]=useState(false);const [selectedProtocol,setSelectedProtocol]=useState(null);
   const [loading,setLoading]=useState(true);const [checkoutMessage,setCheckoutMessage]=useState('');const [showScorecard,setShowScorecard]=useState(false);
   const [badgePopup, setBadgePopup] = useState(null);
+  const [customHabits, setCustomHabits] = useState([]);
 
   // Restore session on mount
-  useEffect(() => { (async()=>{ try { const u = await DataLayer.restoreSession(); if(u) { setUser(u); const [ch,mo,sl,pr] = await Promise.all([DataLayer.getCheckins(u.id),DataLayer.getMoodLogs(u.id),DataLayer.getSleepLogs(u.id),DataLayer.getPremiumStatus(u.id)]); setCheckins(ch);setMoodLog(mo);setSleepLog(sl);setIsPremium(pr); } } catch(e){} setLoading(false); })(); }, []);
+  useEffect(() => { (async()=>{ try { const u = await DataLayer.restoreSession(); if(u) { setUser(u); const [ch,mo,sl,pr,cu] = await Promise.all([DataLayer.getCheckins(u.id),DataLayer.getMoodLogs(u.id),DataLayer.getSleepLogs(u.id),DataLayer.getPremiumStatus(u.id),DataLayer.getCustomHabits(u.id)]); setCheckins(ch);setMoodLog(mo);setSleepLog(sl);setIsPremium(pr);setCustomHabits(cu); } } catch(e){} setLoading(false); })(); }, []);
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -1962,7 +2027,7 @@ export default function App() {
 
   const handleLogin = async (u) => {
     setUser(u);
-    try { const [ch,mo,sl,pr] = await Promise.all([DataLayer.getCheckins(u.id),DataLayer.getMoodLogs(u.id),DataLayer.getSleepLogs(u.id),DataLayer.getPremiumStatus(u.id)]); setCheckins(ch);setMoodLog(mo);setSleepLog(sl);setIsPremium(pr); } catch(e){}
+    try { const [ch,mo,sl,pr,cu] = await Promise.all([DataLayer.getCheckins(u.id),DataLayer.getMoodLogs(u.id),DataLayer.getSleepLogs(u.id),DataLayer.getPremiumStatus(u.id),DataLayer.getCustomHabits(u.id)]); setCheckins(ch);setMoodLog(mo);setSleepLog(sl);setIsPremium(pr);setCustomHabits(cu); } catch(e){}
   };
 
   const handleLogout = async () => { await DataLayer.signOut(); setUser(null); setCheckins({}); setMoodLog({}); setSleepLog({}); setIsPremium(false); };
@@ -1990,6 +2055,27 @@ export default function App() {
       if (badge) setTimeout(() => setBadgePopup(badge), 300);
     }
   };
+
+  const addCustomHabit = async (name, icon) => {
+    if (!user) return;
+    const habit = await DataLayer.addCustomHabit(user.id, name, icon);
+    setCustomHabits(prev => [...prev, habit]);
+  };
+
+  const deleteCustomHabit = async (habit) => {
+    if (!user) return;
+    await DataLayer.deleteCustomHabit(user.id, habit.dbId);
+    setCustomHabits(prev => prev.filter(h => h.id !== habit.id));
+    // Also remove from today's checkins if checked
+    const todayStr = getToday();
+    const dc = checkins[todayStr] || [];
+    if (dc.includes(habit.id)) {
+      const updated = dc.filter(id => id !== habit.id);
+      setCheckins(prev => ({ ...prev, [todayStr]: updated }));
+    }
+  };
+
+  const allHabits = [...DEFAULT_HABITS, ...customHabits];
 
   const logMood = async (value, symptoms = [], note = '') => {
     const todayStr = getToday();
@@ -2029,10 +2115,23 @@ export default function App() {
           {nextLevel&&<div><div style={{ height:5,background:c.bgElevated,borderRadius:3,overflow:'hidden' }}><div style={{ height:'100%',borderRadius:3,transition:'width 0.5s',background:`linear-gradient(90deg,${c.accent},${c.accentDim})`,width:((totalScore-level.minScore)/(nextLevel.minScore-level.minScore)*100)+'%' }} /></div><div style={{ fontSize:11,color:c.textMuted,marginTop:7,textAlign:'right' }}>{nextLevel.icon} {nextLevel.name} at {nextLevel.minScore} pts</div></div>}
         </div>
         <div style={{ display:'flex',alignItems:'center',gap:14,marginBottom:22,padding:16,background:c.bgCard,border:`1px solid ${c.border}`,borderRadius:12 }}>
-          <div style={{ display:'flex',alignItems:'baseline',gap:2 }}><span style={{ fontSize:34,fontWeight:700,fontFamily:serif,color:c.accent }}>{todayCheckins.length}</span><span style={{ fontSize:15,color:c.textMuted,fontFamily:'monospace' }}>/ {DEFAULT_HABITS.length}</span></div>
+          <div style={{ display:'flex',alignItems:'baseline',gap:2 }}><span style={{ fontSize:34,fontWeight:700,fontFamily:serif,color:c.accent }}>{todayCheckins.length}</span><span style={{ fontSize:15,color:c.textMuted,fontFamily:'monospace' }}>/ {DEFAULT_HABITS.length + customHabits.length}</span></div>
           <div style={{ display:'flex',flexDirection:'column',gap:3 }}><span style={{ fontSize:13,color:c.textSec }}>habits today</span>{!streakMaintained?<span style={{ fontSize:11,color:c.warning,fontWeight:500 }}>Need {STREAK_THRESHOLD-todayCheckins.length} more for streak</span>:<span style={{ fontSize:11,color:c.success,fontWeight:600 }}>✓ Streak maintained</span>}</div>
         </div>
         {CATEGORIES.map(cat=><div key={cat} style={{ marginBottom:18 }}><h3 style={{ fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:2,color:c.textMuted,marginBottom:8,paddingLeft:2 }}>{cat}</h3>{DEFAULT_HABITS.filter(h=>h.category===cat).map(habit=><HabitCard key={habit.id} habit={habit} checked={todayCheckins.includes(habit.id)} onToggle={toggleHabit} onShowScience={setScienceHabit} />)}</div>)}
+        
+        {/* Custom Habits */}
+        {isPremium && customHabits.length > 0 && <div style={{ marginBottom:18 }}>
+          <h3 style={{ fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:2,color:c.textMuted,marginBottom:8,paddingLeft:2 }}>Custom</h3>
+          {customHabits.map(habit => <div key={habit.id} style={{ display:'flex',alignItems:'center',gap:0 }}>
+            <div style={{ flex:1 }}><HabitCard habit={habit} checked={todayCheckins.includes(habit.id)} onToggle={toggleHabit} onShowScience={()=>{}} /></div>
+            <button onClick={()=>{if(confirm('Delete "'+habit.name+'"?'))deleteCustomHabit(habit);}} style={{ background:'none',border:'none',color:c.textMuted,fontSize:14,cursor:'pointer',padding:'8px 4px 8px 0',opacity:0.5 }}>✕</button>
+          </div>)}
+        </div>}
+        
+        {/* Add Custom Habit */}
+        {isPremium && <CustomHabitAdder onAdd={addCustomHabit} />}
+        {!isPremium && <button onClick={()=>setShowPremium(true)} style={{ width:'100%',padding:14,borderRadius:10,border:`1px dashed ${c.border}`,background:'transparent',color:c.textMuted,fontSize:13,cursor:'pointer',fontFamily:sans,marginBottom:16 }}>🔒 Add custom habits — Premium</button>}
         <div style={{ marginTop:22 }}><MoodTracker moodLog={moodLog} onLogMood={logMood} /></div>
         <div style={{ marginTop:12 }}><SleepTracker sleepLog={sleepLog} onLogSleep={logSleep} /></div>
         <button onClick={()=>setShowScorecard(true)} style={{ width:'100%',marginTop:24,padding:16,borderRadius:12,border:'none',cursor:'pointer',background:`linear-gradient(135deg,${c.accent},${c.accentDim})`,color:c.bg,fontSize:16,fontWeight:700,fontFamily:sans,letterSpacing:0.5,boxShadow:'0 4px 20px rgba(212,164,74,0.25)' }}>Get My Score</button>
