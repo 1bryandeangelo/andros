@@ -2310,26 +2310,24 @@ function TQuiz({ onComplete, onClose }) {
   const totalPossible = QUIZ_QUESTIONS.reduce((s, q) => s + Math.max(...q.opts.map(o => o.pts)), 0);
 
   const handleAnswer = (pts) => {
-    const newAnswers = [...answers, pts];
-    setAnswers(newAnswers);
-    if (step < QUIZ_QUESTIONS.length - 1) {
-      setTimeout(() => setStep(step + 1), 200);
-    } else {
-      setTimeout(() => setShowResult(true), 300);
-      } else {
-        setTimeout(() => setShowResult(true), 300);
-        window.gtag('event', 'quiz_complete', { event_category: 'engagement', event_label: 'tquiz' }); // GA4 event
-      // Animate score count-up
-      const raw = newAnswers.reduce((a, b) => a + b, 0);
-      const score = Math.round((raw / totalPossible) * 100);
-      let current = 0;
-      const interval = setInterval(() => {
-        current += 2;
-        if (current >= score) { current = score; clearInterval(interval); }
-        setAnimScore(current);
-      }, 20);
-    }
-  };
+  const newAnswers = [...answers, pts];
+  setAnswers(newAnswers);
+  if (step < QUIZ_QUESTIONS.length - 1) {
+    setTimeout(() => setStep(step + 1), 200);
+  } else {
+    setTimeout(() => setShowResult(true), 300);
+    window.gtag('event', 'quiz_complete', { event_category: 'engagement', event_label: 'tquiz' });
+    // Animate score count-up
+    const raw = newAnswers.reduce((a, b) => a + b, 0);
+    const score = Math.round((raw / totalPossible) * 100);
+    let current = 0;
+    const interval = setInterval(() => {
+      current += 2;
+      if (current >= score) { current = score; clearInterval(interval); }
+      setAnimScore(current);
+    }, 20);
+  }
+};
 
   const totalScore = Math.round((answers.reduce((a, b) => a + b, 0) / totalPossible) * 100);
   const getLabel = (s) => s >= 85 ? 'Excellent' : s >= 70 ? 'Good' : s >= 50 ? 'Moderate' : s >= 30 ? 'Needs Work' : 'Critical';
