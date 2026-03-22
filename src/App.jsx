@@ -2316,6 +2316,9 @@ function TQuiz({ onComplete, onClose }) {
       setTimeout(() => setStep(step + 1), 200);
     } else {
       setTimeout(() => setShowResult(true), 300);
+      } else {
+        setTimeout(() => setShowResult(true), 300);
+        window.gtag('event', 'quiz_complete', { event_category: 'engagement', event_label: 'tquiz' }); // GA4 event
       // Animate score count-up
       const raw = newAnswers.reduce((a, b) => a + b, 0);
       const score = Math.round((raw / totalPossible) * 100);
